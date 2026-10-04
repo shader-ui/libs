@@ -124,7 +124,6 @@ npm run typecheck
 
 ## Contact
 
-- Mail: [team@shader-ui.com](mailto:team@shader-ui.com)
 - Website: <https://shader-ui.com>
 - GitHub: <https://github.com/shader-ui/libs>
 
