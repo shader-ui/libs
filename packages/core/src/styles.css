@@ -1,0 +1,58 @@
+/*
+ * Shader UI : styles statiques. La lumière double l'information, ne la porte jamais seule :
+ * ces bordures restent visibles sans shader (WCAG 1.4.11, contraste 3:1 minimum).
+ * Spécificité nulle (:where) : tout se surcharge depuis Tailwind, shadcn/ui ou Bootstrap.
+ */
+:where(:root) {
+  /* Couleurs de la lumière */
+  --sui-color-accent: #8b5cf6;
+  --sui-color-success: #22c55e;
+  --sui-color-error: #ff6f61;
+  /* Bordures et focus. Dark mode first : contrastées à 3:1 minimum sur fond sombre.
+     Sur un site clair, surcharger ces variables (ex. #c62828, #15803d, #6d28d9). */
+  --sui-border-accent: #a78bfa;
+  --sui-border-success: #22c55e;
+  --sui-border-error: #ff6f61;
+  --sui-focus: var(--sui-border-accent);
+}
+
+:where([data-sui-status="error"]) {
+  border-color: var(--sui-border-error);
+}
+:where([data-sui-status="valid"]) {
+  border-color: var(--sui-border-success);
+}
+
+:where([data-sui]):focus-visible {
+  outline: 2px solid var(--sui-focus);
+  outline-offset: 2px;
+}
+
+/* Fallback sans WebGL2 : même sens, rendu par CSS */
+:where([data-sui-fx]) {
+  animation: sui-fx-pulse var(--sui-fx-duration, 700ms) ease-out 1;
+}
+:where([data-sui-fx="orbit"]) {
+  animation: sui-fx-breathe var(--sui-fx-duration, 1400ms) ease-in-out infinite;
+}
+
+@keyframes sui-fx-pulse {
+  from {
+    box-shadow: 0 0 0 2px var(--sui-fx-color), 0 0 14px var(--sui-fx-color);
+  }
+  to {
+    box-shadow: 0 0 0 2px transparent, 0 0 14px transparent;
+  }
+}
+
+@keyframes sui-fx-breathe {
+  50% {
+    box-shadow: 0 0 0 2px var(--sui-fx-color);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where([data-sui-fx="orbit"]) {
+    animation: none;
+  }
+}

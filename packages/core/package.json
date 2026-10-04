@@ -1,0 +1,36 @@
+{
+  "name": "@shader-ui/core",
+  "version": "0.1.0",
+  "description": "Shader UI : la lumière informe. Cœur indépendant de tout framework.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./styles.css": "./dist/styles.css"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.json && cp src/styles.css dist/styles.css",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "shader",
+    "webgl",
+    "ui",
+    "components",
+    "accessibility"
+  ]
+}
