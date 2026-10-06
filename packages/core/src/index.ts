@@ -12,6 +12,8 @@ export type { ColorToken } from "./tokens.js";
 export { perimeterAt } from "./geometry.js";
 export { getEnvironment, subscribeEnvironment, configureEnvironment, resetEnvironment } from "./environment.js";
 export type { EnvironmentOverrides } from "./environment.js";
+export { observeVisibility, getVisibility, canBeSeen, canBeSeenAll } from "./visibility.js";
+export type { Visibility, VisibilityState } from "./visibility.js";
 export { detect } from "./detect.js";
 export type {
   Environment,

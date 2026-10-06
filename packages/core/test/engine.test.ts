@@ -156,3 +156,15 @@ describe("fallback CSS sans WebGL2", () => {
     expect(t.engine.getStats()).toMatchObject({ frames: 0, renderer: "css" });
   });
 });
+
+describe("vérification avant effet (spec Visibilité §6)", () => {
+  it("élément qui ne peut pas être vu : effet non joué, fin signalée skipped", async () => {
+    const t = createTestEngine({ visible: () => false });
+    const el = element();
+    const events = endEvents(el);
+    light(el).trigger("success");
+    await flush();
+    expect(t.pendingFrames).toBe(0);
+    expect(events).toEqual([{ name: "success", reason: "skipped" }]);
+  });
+});

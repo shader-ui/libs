@@ -1,7 +1,7 @@
 import { Engine, setEngine, type Backend, type Instance } from "../src/index.js";
 
 /** Moteur piloté à la main : horloge et rAF simulés, backend espion. */
-export function createTestEngine({ webgl = true } = {}) {
+export function createTestEngine({ webgl = true, visible = () => true }: { webgl?: boolean; visible?: (el: Element) => boolean } = {}) {
   let time = 0;
   let pending: Array<() => void> = [];
   const rendered: Instance[][] = [];
@@ -15,6 +15,7 @@ export function createTestEngine({ webgl = true } = {}) {
   const engine = new Engine({
     createBackend: () => (webgl ? backend : undefined),
     now: () => time,
+    canBeSeen: visible,
     requestFrame: (cb) => {
       pending.push(() => cb(time));
       return pending.length;

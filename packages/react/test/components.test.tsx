@@ -6,7 +6,7 @@ import { Button, Form, Input, Light, ShaderProvider, useEnvironment, type Shader
 
 beforeEach(() => {
   // Rendu CSS (jsdom n'a pas WebGL), horloge réelle
-  setEngine(new Engine({ createBackend: () => undefined }));
+  setEngine(new Engine({ createBackend: () => undefined, canBeSeen: () => true }));
 });
 afterEach(cleanup);
 

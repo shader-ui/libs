@@ -7,7 +7,7 @@ Librairie (pas un framework) de composants d'interface dont les états sont rend
 ## Principes
 
 - **Dark mode first** : c'est la première règle. Shader UI est conçu pour le sombre ; la préférence système de l'utilisateur (`prefers-color-scheme`) est ignorée.
-- **Light = f(state)** : le dev décrit l'état (`status="error"`), jamais l'animation.
+- **Light = f(state)** : l'état est lu dans le HTML (validité native, `aria-invalid`, `aria-busy`), jamais déclaré deux fois ; le dev ne décrit jamais l'animation.
 - **Le bord, pas le fond** : l'effet vit sur le contour, le contenu reste net.
 - **Un effet, une raison** : au repos, l'interface est immobile.
 - **Court, unique, un seul à la fois** : boucle seulement pour un état en cours (`loading`).
@@ -48,7 +48,7 @@ Ne jamais partir direct dans le code. Une décision structurante (arborescence, 
 
 ```tsx
 <Form onSubmit={save}>
-  <Input name="email" status={errors.email ? "error" : "valid"} />
+  <Input name="email" type="email" required aria-invalid={!!errors.email} aria-describedby="email-err" />
   <Input name="password" effects={{ onPaste: "ripple" }} />
   <Button type="submit">Continuer</Button>
 </Form>
@@ -95,7 +95,7 @@ ref.current?.trigger("pulse", { color: "success" });
   - Jamais « ShaderUI », « Shader-UI » ni « shaderui ».
 - Logotype « shader-ui » en Genos 700, vectorisé.
 - Hover : mot à 28 % d'opacité, faisceau de lumière en alpha (sans couleur) incliné à 105°, 0,93 passage/s, fondu en entrée et en sortie.
-- Les trois couleurs (violet, vert, corail) sont réservées aux composants.
+- Les trois couleurs de sens (violet, vert, corail) et le blanc neutre sont réservés aux composants.
 
 ## Modèle économique
 

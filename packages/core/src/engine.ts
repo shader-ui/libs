@@ -3,6 +3,7 @@ import { reduceMotion, sampleEffect, MAX_LOOP_DURATION, type EffectDefinition } 
 import { isBrowser, warn } from "./env.js";
 import { getEnvironment, reportFrameTime } from "./environment.js";
 import { perimeterAt } from "./geometry.js";
+import { canBeSeen } from "./visibility.js";
 import { createWebGLBackend, KIND_ID, type Backend, type Instance } from "./webgl.js";
 
 export type EndReason = "complete" | "interrupted" | "skipped";
@@ -43,6 +44,8 @@ export interface EngineOptions {
   createBackend?: () => Backend | undefined;
   now?: () => number;
   requestFrame?: (cb: (time: number) => void) => number;
+  /** Vérification avant effet (spec Visibilité §6). Remplaçable pour les tests. */
+  canBeSeen?: (el: Element) => boolean;
 }
 
 export class Engine {
@@ -61,11 +64,13 @@ export class Engine {
   private readonly createBackend: () => Backend | undefined;
   private readonly now: () => number;
   private readonly requestFrame: (cb: (time: number) => void) => number;
+  private readonly canBeSeen: (el: Element) => boolean;
 
   constructor(options: EngineOptions = {}) {
     this.createBackend = options.createBackend ?? createWebGLBackend;
     this.now = options.now ?? (() => performance.now());
     this.requestFrame = options.requestFrame ?? ((cb) => requestAnimationFrame(cb));
+    this.canBeSeen = options.canBeSeen ?? canBeSeen;
   }
 
   /** Interrupteur global : coupe tous les effets. Les événements de fin sont toujours émis. */
@@ -81,6 +86,8 @@ export class Engine {
   play(el: Element, definition: EffectDefinition, options: PlayOptions = {}): void {
     const skip = () => queueMicrotask(() => options.onEnd?.("skipped"));
     if (!this.enabled || !isBrowser()) return skip();
+    // Une lumière que personne ne voit n'est pas jouée ; sa fin est signalée quand même
+    if (!this.canBeSeen(el)) return skip();
 
     // WCAG 2.3.3 : le mouvement est remplacé par un simple fondu
     const def = getEnvironment()?.preferences.reducedMotion ? reduceMotion(definition) : definition;

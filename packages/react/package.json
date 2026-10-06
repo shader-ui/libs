@@ -20,6 +20,7 @@
     "dist"
   ],
   "scripts": {
+    "prepublishOnly": "npm run build --prefix ../core && npm run build",
     "build": "rm -rf dist && tsc -p tsconfig.json && cp ../core/src/styles.css dist/styles.css",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
