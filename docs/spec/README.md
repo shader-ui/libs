@@ -8,7 +8,7 @@ Méthode (voir `../../CLAUDE.md`) : algo discuté, puis spec validée, puis code
 
 | Spec | Rôle | Statut | Code |
 |---|---|---|---|
-| [Environnement](environment.md) | où suis-je : appareil, navigateur, rendu, performance | validée | fait |
+| [Environnement](environment.md) | où suis-je : appareil, navigateur, rendu, performance | validée (0.2) | fait |
 | [Visibilité](visibility.md) | l'élément peut-il être vu | validée (0.2) | fait (écart de budget noté §8.3) |
 | [Liens qui se dessinent](reveal-links.md) | révéler les liens d'un texte, images-liens comprises | validée | à faire |
 | [Cibles](targets.md) | sur quoi la lib s'applique, cas particuliers, hors périmètre | validée | à faire |

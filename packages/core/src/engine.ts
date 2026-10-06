@@ -94,8 +94,8 @@ export class Engine {
   play(el: Element, definition: EffectDefinition, options: PlayOptions = {}): void {
     const skip = () => queueMicrotask(() => options.onEnd?.("skipped"));
     if (!this.enabled || !isBrowser()) return skip();
-    // Contraste élevé : les couleurs système suffisent, pas de shader (spec Formulaire §1)
-    if (typeof matchMedia === "function" && matchMedia("(forced-colors: active)").matches) return skip();
+    // Contraste élevé : les couleurs système suffisent, pas de shader (spec Formulaire §1, Environnement §2)
+    if (getEnvironment()?.preferences.forcedColors) return skip();
     // Une lumière que personne ne voit n'est pas jouée ; sa fin est signalée quand même
     if (!this.canBeSeen(el)) return skip();
 

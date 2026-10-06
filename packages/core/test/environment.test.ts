@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   configureEnvironment,
   detect,
@@ -192,6 +192,14 @@ describe("rendu", () => {
     expect(detect(input({ webgpu: true })).render).toEqual({ status: "pending", webgpu: true });
   });
 
+  it("GPU d'entrée de gamme récents (Galaxy A12, Helio, Snapdragon 4xx) : low ; haut de gamme : pas low", () => {
+    const phone = input({ pointer: "coarse", hover: false, maxTouchPoints: 5, hardwareConcurrency: 8, deviceMemory: 3, userAgent: "Mozilla/5.0 (Linux; Android 11; SM-A125F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Mobile Safari/537.36" });
+    for (const gpu of ["PowerVR Rogue GE8320", "Mali-G52 MC2", "Adreno (TM) 506"]) {
+      expect(detect(phone, { webgl2: true, gpu }).performance.tier).toBe("low");
+    }
+    expect(detect(phone, { webgl2: true, gpu: "Adreno (TM) 740" }).performance.tier).not.toBe("low");
+  });
+
   it("repère le rendu logiciel", () => {
     const render = detect(input({}), { webgl2: true, gpu: "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device))" }).render;
     expect(render).toMatchObject({ status: "ready", webgl2: true, software: true });
@@ -212,6 +220,23 @@ describe("module en fonctionnement", () => {
     expect(getEnvironment()!.performance).toEqual({ tier: "low", reasons: ["forcé"] });
     configureEnvironment(undefined);
     expect(getEnvironment()!.device.type).toBe("desktop");
+  });
+
+  it("contraste élevé (forced-colors) : détecté, et suivi en direct", () => {
+    let active = false;
+    let onChange: (() => void) | undefined;
+    vi.stubGlobal("matchMedia", (q: string) => ({
+      get matches() {
+        return q === "(forced-colors: active)" && active;
+      },
+      addEventListener: (_: string, cb: () => void) => q === "(forced-colors: active)" && (onChange = cb),
+      removeEventListener() {},
+    }));
+    expect(getEnvironment()!.preferences.forcedColors).toBe(false);
+    active = true;
+    onChange!();
+    expect(getEnvironment()!.preferences.forcedColors).toBe(true);
+    vi.unstubAllGlobals();
   });
 
   it("suit le dernier geste et prévient les abonnés", () => {

@@ -17,6 +17,7 @@ const QUERIES = {
   coarse: "(pointer: coarse)",
   hover: "(hover: hover)",
   reducedMotion: "(prefers-reduced-motion: reduce)",
+  forcedColors: "(forced-colors: active)",
 };
 
 /** Mesure des frames : au-delà de 20 ms de médiane sur 30 frames, on baisse d'un niveau. */
@@ -51,6 +52,7 @@ function readInput(lastInput?: InputKind): DetectionInput {
     deviceMemory: nav.deviceMemory,
     saveData: nav.connection?.saveData === true,
     reducedMotion: matches(QUERIES.reducedMotion),
+    forcedColors: matches(QUERIES.forcedColors),
     webgpu: "gpu" in nav,
     lastInput,
   };

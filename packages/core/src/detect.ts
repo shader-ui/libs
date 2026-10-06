@@ -50,6 +50,8 @@ export interface Environment {
   };
   preferences: {
     reducedMotion: boolean;
+    /** Contraste élevé (`forced-colors: active`) : couleurs système, pas de shader. */
+    forcedColors: boolean;
     saveData: boolean;
   };
 }
@@ -70,6 +72,7 @@ export interface DetectionInput {
   deviceMemory?: number;
   saveData: boolean;
   reducedMotion: boolean;
+  forcedColors?: boolean;
   webgpu: boolean;
   lastInput?: InputKind;
 }
@@ -211,7 +214,8 @@ export function isSoftwareGpu(gpu: string): boolean {
   return SOFTWARE_GPU.test(gpu);
 }
 
-const LOW_END_GPU = /Mali-(?:4\d\d|T\d+)|Adreno(?: \(TM\))? [34]\d\d|PowerVR SGX/i;
+/** GPU d'entrée de gamme, anciens et récents (Galaxy A12 : PowerVR GE8320). À compléter avec le parc réel. */
+const LOW_END_GPU = /Mali-(?:4\d\d|T\d+|G31|G51|G52)\b|Adreno(?: \(TM\))? (?:[34]\d\d|50\d|51\d)\b|PowerVR (?:SGX|(?:Rogue )?GE8\d{3})/i;
 
 export function detectRender(input: DetectionInput, info?: RenderInfo): Environment["render"] {
   if (!info) return { status: "pending", webgpu: input.webgpu };
@@ -276,6 +280,7 @@ export function detect(input: DetectionInput, info?: RenderInfo, downgrades = 0)
     performance: detectPerformance(input, device, render, downgrades),
     preferences: {
       reducedMotion: input.reducedMotion,
+      forcedColors: input.forcedColors === true,
       saveData: input.saveData,
     },
   };

@@ -1,6 +1,6 @@
 # Environnement
 
-> Spécification Shader UI · module `environment` · version 0.1 · **brouillon**
+> Spécification Shader UI · module `environment` · version 0.2 · **validée**
 
 Avant d'allumer quoi que ce soit, la lib doit savoir où elle est : quel appareil, quel navigateur, ce que le GPU sait faire, et à quel coût. Tous les composants et tous les effets s'appuient sur ce module.
 
@@ -49,6 +49,7 @@ interface Environment {
   };
   preferences: {
     reducedMotion: boolean;
+    forcedColors: boolean;               // contraste élevé : couleurs système, pas de shader
     saveData: boolean;
   };
 }
@@ -136,11 +137,13 @@ Proposition initiale, **à calibrer sur appareils réels** (dont Android d'entr�
 
 | Niveau | Conditions (une seule suffit) |
 |---|---|
-| `low` | `deviceMemory ≤ 2` · `hardwareConcurrency ≤ 4` sur mobile ou tablette · GPU d'entrée de gamme connu (Mali-4xx, Mali-T, Adreno 3xx/4xx, PowerVR SGX) · `saveData` |
+| `low` | `deviceMemory ≤ 2` · `hardwareConcurrency ≤ 4` sur mobile ou tablette · GPU d'entrée de gamme connu : anciens (Mali-4xx, Mali-T, Adreno 3xx/4xx, PowerVR SGX) et récents (Mali-G31/G51/G52, Adreno 50x/51x, PowerVR GE8xxx, celui du Galaxy A12) · `saveData` |
 | `high` | desktop, `hardwareConcurrency ≥ 8`, GPU non `low` |
 | `medium` | tout le reste |
 
 Chaque condition retenue DOIT être ajoutée à `performance.reasons`.
+
+**Limite assumée** : Safari n'expose ni `deviceMemory` ni les Client Hints, et le nom du GPU y est souvent générique. Sur iPhone et iPad, le niveau repose surtout sur la mesure des frames ci-dessous, qui sert de filet pour tous les appareils mal classés.
 
 | Niveau | Effet sur le rendu |
 |---|---|
@@ -169,7 +172,7 @@ configureEnvironment({ device: { type: "mobile" }, performance: { tier: "low" } 
 
 ## 7. Mise à jour en direct et SSR
 
-- Le module DOIT écouter les changements de `pointer`, `hover` et `prefers-reduced-motion` (`matchMedia(...).addEventListener("change")`).
+- Le module DOIT écouter les changements de `pointer`, `hover`, `prefers-reduced-motion` et `forced-colors` (`matchMedia(...).addEventListener("change")`). Le moteur lit le contraste élevé ici : une seule source (principe 5).
 - Il NE DOIT PAS lire `prefers-color-scheme` : Shader UI est dark mode first, la préférence système de l'utilisateur est ignorée.
 - Il DOIT exposer un abonnement : `subscribeEnvironment(listener)`.
 - **SSR** : rien ne DOIT être lu à l'import du module. Côté serveur, `getEnvironment()` DOIT renvoyer `undefined`.
@@ -194,7 +197,14 @@ Une implémentation DOIT passer une table de cas : user agent, Client Hints, ré
 
 ## 10. Questions ouvertes
 
-1. **MacBook tactile** : vérifier `pointer` et le user agent à la sortie.
-2. **iPad + Magic Keyboard** : vérifier `pointer` sur un vrai appareil.
+1. **MacBook tactile** : vérifier `pointer` et le user agent quand il sera disponible.
+2. **iPad + Magic Keyboard** : vérifier `pointer` sur un vrai appareil (l'iPad Air de test, avec un clavier).
 3. **WebGPU** : quand le rendu WebGPU arrivera, demander l'adaptateur (asynchrone) au premier effet seulement.
 4. **Niveaux de performance** : calibrer les seuils sur un parc d'appareils réels.
+
+---
+
+## Historique
+
+- **0.2** : validée ; contraste élevé dans les préférences, GPU d'entrée de gamme récents, limite Safari.
+- **0.1** : brouillon, code écrit avant la méthode.
