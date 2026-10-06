@@ -243,10 +243,12 @@ export function watchForm(element: HTMLFormElement, options: FormOptions = {}): 
     }
   }
 
-  /** Au premier geste : une lueur après le label de chaque champ obligatoire, en cascade. */
-  function guide(): void {
-    if (guided) return;
-    guided = true;
+  /**
+   * Dès le branchement : les labels des champs obligatoires reçoivent leur lueur, éteinte et invisible.
+   * Sa place est réservée tout de suite : l'allumer au premier geste ne déplace rien. Sinon, le bouton
+   * glisserait sous le pointeur entre l'appui et le relâchement, et le premier clic serait perdu.
+   */
+  function prepareGuide(): void {
     const found = new Map<HTMLElement, HTMLInputElement[]>();
     let unlabelled = false;
     for (const control of element.elements) {
@@ -259,21 +261,25 @@ export function watchForm(element: HTMLFormElement, options: FormOptions = {}): 
     // Un champ sans label visible est une erreur (WCAG 3.3.2) : pas de lueur, rien ne la remplace
     if (unlabelled) {
       warn("mode init : un champ obligatoire n'a pas de label visible (WCAG 3.3.2), les lueurs ne sont pas affichées.");
+      guided = true;
       return;
     }
-    const reduced = getEnvironment()?.preferences.reducedMotion === true;
     for (const [label, controls] of found) {
       required.set(label, controls);
       label.dataset.suiRequired = "";
     }
-    // L'état de départ (invisible, plus bas) doit être calculé avant l'allumage, sinon le premier
-    // label s'allumerait sans transition : une lecture de mise en page force ce calcul
-    void element.offsetWidth;
-    [...found].forEach(([label, controls], i) => {
+  }
+
+  /** Au premier geste : les lueurs s'allument en cascade, dans l'ordre du formulaire. */
+  function guide(): void {
+    if (guided) return;
+    guided = true;
+    const reduced = getEnvironment()?.preferences.reducedMotion === true;
+    [...required].forEach(([label, controls], i) => {
       const show = () => {
         label.dataset.suiRequired = done(controls) ? "off" : "on";
       };
-      // Mouvement réduit : toutes d'un coup ; sinon en cascade, dans l'ordre du formulaire
+      // Mouvement réduit : toutes d'un coup ; sinon en cascade
       if (reduced || i === 0) show();
       else guideTimers.push(setTimeout(show, i * ERROR_STAGGER));
     });
@@ -362,6 +368,7 @@ export function watchForm(element: HTMLFormElement, options: FormOptions = {}): 
   element.addEventListener("input", onInput, true);
   element.addEventListener("change", onFocusOut, true);
   if (options.guide) {
+    prepareGuide();
     element.addEventListener("pointerenter", onPointerEnter);
     element.addEventListener("pointerleave", onPointerLeave);
     element.addEventListener("pointerdown", onPointerDown, true);

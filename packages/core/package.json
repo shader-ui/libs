@@ -1,6 +1,6 @@
 {
   "name": "@shader-ui/core",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Shader UI : la lumière informe. Cœur indépendant de tout framework.",
   "license": "MIT",
   "homepage": "https://shader-ui.com",

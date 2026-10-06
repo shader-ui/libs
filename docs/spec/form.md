@@ -40,7 +40,7 @@ Le formulaire et chacun de ses champs sont suivis par le module [Visibilité](vi
 - **Apparition** au premier geste, en cascade dans l'ordre du formulaire (`ERROR_STAGGER`, 150 ms d'écart), en fondu, avec un mouvement venu du bas (12 px), comme si elle montait. Elle s'éteint sur place, sans mouvement.
 - **Elle reste tant que le champ est vide ou en erreur**, et **s'éteint en fondu** dès qu'il est renseigné (texte non vide, case cochée, radio choisi) et sans erreur. Elle se rallume si on le vide ou s'il passe en erreur.
 - **Couleur** : le blanc neutre (`--sui-color-neutral`), ni violet, ni vert, ni corail : « obligatoire » n'est pas un état.
-- **CSS seul** : un pseudo-élément `::after` sur le label, sans shader, zéro frame. Il remplace un éventuel `::after` du site sur ses labels ; `--sui-required: none` la retire.
+- **CSS seul** : un pseudo-élément `::after` sur le label, sans shader, zéro frame. **Sa place est réservée dès le chargement**, invisible : l'allumer ne DOIT jamais déplacer la mise en page (sinon le bouton glisse sous le pointeur entre l'appui et le relâchement, et le premier clic est perdu). Il remplace un éventuel `::after` du site sur ses labels ; `--sui-required: none` la retire.
 - L'obligation reste portée par `required` et par le label du dev (astérisque, mention « obligatoire ») : la lumière la double, elle ne la porte pas (WCAG 1.4.1, 3.3.2).
 
 **Sautés** : champs désactivés ou en lecture seule. **Sans label visible, pas de lueur** et avertissement en mode dev (WCAG 3.3.2), sans repli.

@@ -54,6 +54,12 @@ describe("mode init (§2.2, §6.2)", () => {
     expect(glowing()).toEqual(["Nom", "E-mail", "Livraison"]);
   });
 
+  it("place réservée dès le chargement (lueur éteinte) : l'allumer ne déplace pas la mise en page", () => {
+    setup(FORM);
+    const labels = [...document.querySelectorAll<HTMLElement>("label, legend")];
+    expect(labels.filter((l) => l.dataset.suiRequired === "").map((l) => l.textContent)).toEqual(["Nom", "E-mail", "Livraison"]);
+  });
+
   it("souris qui traverse en moins de 300 ms : rien ; survol continu : lueurs", () => {
     const form = setup(FORM);
     form.dispatchEvent(new PointerEvent("pointerenter", { pointerType: "mouse" }));

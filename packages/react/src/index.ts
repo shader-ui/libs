@@ -28,6 +28,7 @@ export {
   configureEnvironment,
   watchField,
   fieldOf,
+  TYPING_PAUSE,
   watchButton,
   buttonOf,
   watchForm,

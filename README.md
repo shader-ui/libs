@@ -74,6 +74,7 @@ ref.current?.trigger("pulse", { color: "success" });
 - `onEffectEnd` is always called, even when the effect is skipped (`reason: "skipped"`): choreographies never get stuck.
 - `<Light>` adds the light border to any element: `<Light status="valid"><div className="card" /></Light>`.
 - Without React: `light(element, { status })` from `@shader-ui/core`.
+- Server check (name already taken, promo code): set `aria-busy` while waiting and keep `aria-invalid` until the new answer, otherwise the field turns green before the server has confirmed. Start the check after the same typing pause as the library (`TYPING_PAUSE`, 1 s) or on blur.
 - Visibility: an effect never plays on an element that cannot be seen (off screen, covered by a modal, under the virtual keyboard). The module is also available on its own: `const { state, seen } = useVisibility(ref)` in React, or `observeVisibility(element, listener)` and `canBeSeen(element)`.
 
 ## Guarantees
@@ -92,7 +93,7 @@ ref.current?.trigger("pulse", { color: "success" });
 
 ## Customization
 
-CSS colors: `--sui-color-accent|success|error` (light), `--sui-border-*` (static borders), `--sui-focus`.
+CSS colors: `--sui-color-accent|success|error|neutral` (light), `--sui-border-*` (static borders), `--sui-focus`. Style your fields with `background-color` rather than the `background` shorthand: the shorthand resets the diode, which is drawn as a background image. Remove it with `--sui-diode: none`.
 
 Custom effects, described as data:
 

@@ -40,8 +40,9 @@
   min-height: 44px;
   --sui-diode-color: transparent;
 }
-/* Place réservée à la diode : le texte ne passe jamais dessous, et ne saute pas quand elle s'allume */
-input[data-sui-field] {
+/* Place réservée à la diode : le texte ne passe jamais dessous, et ne saute pas quand elle s'allume.
+   L'attribut doublé ajoute un cran de spécificité : le rendu du sens résiste à `.form input { padding }` */
+input[data-sui-field][data-sui-field] {
   padding-inline-end: calc(var(--sui-diode-inset) * 2);
 }
 /* Bouton (§4.3) : la diode n'existe que pendant l'envoi, violette, fixe au-delà de 5 s */
@@ -52,7 +53,7 @@ button[data-sui-button][data-sui-state="loading"] {
   --sui-diode-color: var(--sui-border-accent);
 }
 /* La diode, dessinée en CSS : le shader ne la dessine pas, il faudrait redessiner à chaque défilement */
-:is(input[data-sui-field], button[data-sui-button])[data-sui-state] {
+:is(input[data-sui-field], button[data-sui-button])[data-sui-state][data-sui-state] {
   background-image: var(
     --sui-diode,
     radial-gradient(
@@ -66,16 +67,16 @@ button[data-sui-button][data-sui-state="loading"] {
   background-size: 16px 16px;
   background-position: right calc(var(--sui-diode-inset) - 8px) center;
 }
-:is(input[data-sui-field], button[data-sui-button])[data-sui-state]:dir(rtl) {
+:is(input[data-sui-field], button[data-sui-button])[data-sui-state][data-sui-state]:dir(rtl) {
   background-position: left calc(var(--sui-diode-inset) - 8px) center;
 }
 /* Pas seulement la couleur : l'erreur épaissit la bordure, sans décaler la mise en page */
-input[data-sui-field][data-sui-state="error"] {
+input[data-sui-field][data-sui-state="error"][data-sui-state] {
   --sui-diode-color: var(--sui-border-error);
   border-color: var(--sui-border-error);
   box-shadow: inset 0 0 0 1px var(--sui-border-error);
 }
-input[data-sui-field][data-sui-state="valid"] {
+input[data-sui-field][data-sui-state="valid"][data-sui-state] {
   --sui-diode-color: var(--sui-border-success);
   border-color: var(--sui-border-success);
 }
@@ -214,7 +215,8 @@ input[data-sui-choice]:disabled {
 }
 
 /* Mode init (spec Formulaire §2.2) : une lueur blanche après le label d'un champ obligatoire, tant qu'il
-   est vide. CSS seul, zéro frame. Remplace un éventuel ::after du site ; --sui-required: none la retire. */
+   est vide. CSS seul, zéro frame. Remplace un éventuel ::after du site ; --sui-required: none la retire.
+   Sa place est réservée dès le chargement, invisible : l'allumer ne déplace jamais la mise en page. */
 [data-sui-required]::after {
   content: var(--sui-required, "");
   display: inline-block;
@@ -268,7 +270,7 @@ input[data-sui-choice]:disabled {
     background-image: none;
     border-inline-end: 6px solid ButtonText;
   }
-  input[data-sui-field][data-sui-state="error"] {
+  input[data-sui-field][data-sui-state="error"][data-sui-state] {
     border-inline-end-style: double;
   }
 }
