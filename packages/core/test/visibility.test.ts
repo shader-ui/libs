@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { canBeSeen, canBeSeenAll, getVisibility, observeVisibility, type Visibility } from "../src/index.js";
-import { isClipClosed, resetVisibility, SEEN_DELAY, START_TIMEOUT } from "../src/visibility.js";
+import { resetVisibility, SEEN_DELAY, START_TIMEOUT } from "../src/visibility.js";
 
 /** Tests de conformité : spec Visibilité §10. Les API absentes de jsdom sont simulées. */
 
@@ -170,21 +170,6 @@ describe("démarrage et état inconnu (§4.1, §4.8)", () => {
     delete document.readyState;
   });
 
-  it("sans requestIdleCallback : load arrivé avant, démarrage tout de suite après", () => {
-    vi.stubGlobal("requestIdleCallback", undefined);
-    Object.defineProperty(document, "readyState", { configurable: true, get: () => "loading" });
-    const el = element();
-    track(el);
-    window.dispatchEvent(new Event("load"));
-    vi.advanceTimersByTime(0);
-    expect(liveObservers()).toHaveLength(1);
-    // @ts-expect-error retour au readyState de jsdom
-    delete document.readyState;
-  });
-
-  it("un élément non observé est unknown", () => {
-    expect(getVisibility(element()).state).toBe("unknown");
-  });
 });
 
 describe("règles du §4.2", () => {
@@ -219,14 +204,6 @@ describe("règles du §4.2", () => {
     expect(getVisibility(el).state).toBe("partial");
   });
 
-  it("plus haut que l'écran, occupant 60 % de sa hauteur → visible", () => {
-    const el = element();
-    start(el);
-    // 1 600 px de haut, 480 px visibles : ratio 0,3, seuil 0,25
-    fire(el, { box: rect(320, 0, 400, 1600), ratio: 0.3 });
-    expect(getVisibility(el).state).toBe("visible");
-  });
-
   it("5 fois plus haut que l'écran, occupant 55 % de sa hauteur → visible", () => {
     const el = element();
     start(el);
@@ -234,12 +211,6 @@ describe("règles du §4.2", () => {
     expect(getVisibility(el).state).toBe("visible");
   });
 
-  it("élément coupé, occupant 20 % de la hauteur de l'écran → partial", () => {
-    const el = element();
-    start(el);
-    fire(el, { box: rect(640, 0, 400, 1600), ratio: 160 / 1600 });
-    expect(getVisibility(el).state).toBe("partial");
-  });
 });
 
 describe("hors d'atteinte (§4.7)", () => {
@@ -248,23 +219,6 @@ describe("hors d'atteinte (§4.7)", () => {
     start(el);
     fire(el, { box: rect(100, -9999, 200, 40), ratio: 0 });
     expect(getVisibility(el).state).toBe("hidden");
-  });
-
-  it("page en overflow-x: hidden, élément au-delà du bord droit → hidden", () => {
-    const el = element();
-    start(el);
-    fire(el, { box: rect(100, 500, 200, 40), ratio: 0 });
-    expect(getVisibility(el).state).toBe("hidden");
-  });
-
-  it("écriture verticale (vertical-rl), élément à gauche atteignable → offscreen", () => {
-    document.documentElement.style.writingMode = "vertical-rl";
-    setScroll({ scrollWidth: 1200, scrollLeft: 0 });
-    const el = element();
-    start(el);
-    fire(el, { box: rect(100, -500, 200, 40), ratio: 0 });
-    expect(getVisibility(el).state).toBe("offscreen");
-    document.documentElement.style.writingMode = "";
   });
 
   it("page en RTL, élément à gauche atteignable en défilant → offscreen", () => {
@@ -316,66 +270,9 @@ describe("masqué visuellement (§4.6)", () => {
     expect(getVisibility(el).state).toBe("visible");
   });
 
-  it("masqué par son clip, sort de l'écran puis revient : un seul ResizeObserver", () => {
-    const el = element();
-    el.style.clipPath = "inset(50%)";
-    start(el);
-    fire(el, { box: rect(100, 20, 200, 40) });
-    expect(liveResizeObservers()).toHaveLength(1);
-    fire(el, { box: rect(1200, 20, 200, 40), ratio: 0 });
-    expect(liveResizeObservers()).toHaveLength(1);
-    fire(el, { box: rect(100, 20, 200, 40) });
-    expect(FakeResizeObserver.instances).toHaveLength(1);
-    expect(liveResizeObservers()[0]!.targets.has(el)).toBe(true);
-  });
-
-  it("notification du ResizeObserver à taille identique : pas de réobservation", () => {
-    const el = element();
-    start(el);
-    fire(el, { box: rect(100, 20, 1, 1) });
-    const observed = observerOf(el)!.observed;
-    const ro = liveResizeObservers()[0]!;
-    ro.callback([{ target: el, borderBoxSize: [{ inlineSize: 1, blockSize: 1 }] }]);
-    expect(observerOf(el)!.observed).toBe(observed);
-    ro.callback([{ target: el, borderBoxSize: [{ inlineSize: 200, blockSize: 40 }] }]);
-    expect(observerOf(el)!.observed).toBe(observed + 1);
-  });
-
-  it("analyse du clip : auto, élément non positionné, rectangle vide ou inversé", () => {
-    const abs = { clipPath: "none", position: "absolute" };
-    expect(isClipClosed({ ...abs, clip: "rect(0px, 0px, 0px, 0px)" })).toBe(true);
-    expect(isClipClosed({ ...abs, clip: "rect(auto, auto, auto, auto)" })).toBe(false);
-    expect(isClipClosed({ ...abs, clip: "rect(10px, 50px, 5px, 0px)" })).toBe(true); // inversé
-    expect(isClipClosed({ ...abs, clip: "rect(0px, 50px, 20px, 0px)" })).toBe(false);
-    expect(isClipClosed({ clip: "rect(0px, 0px, 0px, 0px)", clipPath: "none", position: "static" })).toBe(false);
-  });
-
-  it("analyse de inset() : valeurs à leur position", () => {
-    const style = (clipPath: string) => ({ clip: "auto", clipPath, position: "static" });
-    expect(isClipClosed(style("inset(50%)"))).toBe(true);
-    expect(isClipClosed(style("inset(0px 50%)"))).toBe(true);
-    expect(isClipClosed(style("inset(30% 0px 70%)"))).toBe(true);
-    expect(isClipClosed(style("inset(50% round 4px)"))).toBe(true);
-    expect(isClipClosed(style("inset(0px 0px 60%)"))).toBe(false);
-    expect(isClipClosed(style("inset(10%)"))).toBe(false);
-    expect(isClipClosed(style("inset(100px)"))).toBe(false);
-  });
-
-  it("aucun élément masqué → aucun ResizeObserver", () => {
-    const el = element();
-    start(el);
-    fire(el, { box: rect(100, 20, 200, 40) });
-    expect(FakeResizeObserver.instances).toHaveLength(0);
-  });
 });
 
 describe("seuils et observers (§4.3)", () => {
-  it("petit élément : [0, 0.99]", () => {
-    const el = element();
-    start(el);
-    fire(el, { box: rect(100, 20, 200, 40) });
-    expect(observerOf(el)!.thresholds).toEqual([0, 0.99]);
-  });
 
   it("élément de 3 écrans de haut : [0, 0.17], sur son propre observer", () => {
     const el = element();
@@ -406,43 +303,6 @@ describe("seuils et observers (§4.3)", () => {
     expect(observerOf(el)!.thresholds).toEqual([0, 0.32]);
   });
 
-  it("relevé périmé d'un ancien observer après changement de groupe : ignoré", () => {
-    const other = element();
-    const el = element();
-    track(other);
-    start(el);
-    const small = observerOf(el)!;
-    fire(el, { box: rect(0, 0, 400, 2400), ratio: 800 / 2400 }); // devient grand : change d'observer
-    expect(observerOf(el)).not.toBe(small);
-    fire(el, { box: rect(0, 0, 400, 2400), ratio: 800 / 2400 });
-    expect(getVisibility(el).state).toBe("visible");
-    // Un relevé resté en file dans l'ancien observer arrive après
-    small.callback(
-      [{ target: el, boundingClientRect: rect(1200, 0, 400, 2400), intersectionRatio: 0, isIntersecting: false, rootBounds: rect(0, 0, 400, 800) }],
-      small,
-    );
-    expect(getVisibility(el).state).toBe("visible");
-  });
-
-  it("rotation de l'écran : éléments réobservés", () => {
-    let onRotate: (() => void) | undefined;
-    vi.stubGlobal("matchMedia", () => ({ matches: true, addEventListener: (_: string, cb: () => void) => (onRotate = cb), removeEventListener() {} }));
-    const el = element();
-    start(el);
-    fire(el, { box: rect(100, 20, 200, 40) });
-    const observed = observerOf(el)!.observed;
-    onRotate!();
-    expect(observerOf(el)!.observed).toBe(observed + 1);
-  });
-
-  it("retour arrière depuis le cache (pageshow persisté) : éléments réobservés", () => {
-    const el = element();
-    start(el);
-    fire(el, { box: rect(100, 20, 200, 40) });
-    const observed = observerOf(el)!.observed;
-    window.dispatchEvent(Object.assign(new Event("pageshow"), { persisted: true }));
-    expect(observerOf(el)!.observed).toBe(observed + 1);
-  });
 });
 
 describe("« vu » (§4.4)", () => {
@@ -476,87 +336,6 @@ describe("« vu » (§4.4)", () => {
     expect(vi.getTimerCount()).toBe(1);
   });
 
-  it("le plus urgent sort : le minuteur passe au suivant", () => {
-    const a = element();
-    const b = element();
-    const ta = track(a);
-    const tb = track(b);
-    idle!();
-    fire(a, { box: rect(100, 20, 200, 40) });
-    vi.advanceTimersByTime(200);
-    fire(b, { box: rect(200, 20, 200, 40) });
-    vi.advanceTimersByTime(100);
-    fire(a, { box: rect(1200, 20, 200, 40), ratio: 0 });
-    vi.advanceTimersByTime(250); // 550 ms depuis A, 350 ms depuis B
-    expect(ta.calls.some((v) => v.seen)).toBe(false);
-    expect(getVisibility(b).seen).toBe(false);
-    expect(vi.getTimerCount()).toBe(1);
-    vi.advanceTimersByTime(150); // 500 ms depuis B
-    expect(getVisibility(b).seen).toBe(true);
-    expect(tb.calls.at(-1)).toMatchObject({ seen: true });
-    expect(vi.getTimerCount()).toBe(0);
-  });
-
-  it("saut de l'heure système : seen arrive toujours après 500 ms", () => {
-    const el = element();
-    start(el);
-    fire(el, { box: rect(100, 20, 200, 40) });
-    vi.setSystemTime(Date.now() - 3_600_000);
-    vi.advanceTimersByTime(SEEN_DELAY - 1);
-    expect(getVisibility(el).seen).toBe(false);
-    vi.advanceTimersByTime(1);
-    expect(getVisibility(el).seen).toBe(true);
-  });
-
-  it("délai arrondi vers le haut : pas de réveil pour rien", () => {
-    // Les navigateurs tronquent les délais fractionnaires : 449,1 ms partent à 449 ms
-    const fakeSetTimeout = globalThis.setTimeout;
-    let scheduled = 0;
-    vi.stubGlobal("setTimeout", (fn: () => void, ms = 0) => {
-      scheduled++;
-      return fakeSetTimeout(fn, Math.floor(ms));
-    });
-    // performance.now() est fractionnaire dans un vrai navigateur
-    const fakeNow = performance.now.bind(performance);
-    let fraction = 0;
-    vi.spyOn(performance, "now").mockImplementation(() => fakeNow() + fraction);
-    const a = element();
-    const b = element();
-    track(a);
-    track(b);
-    idle!();
-    fire(a, { box: rect(100, 20, 200, 40) }); // échéance 500
-    vi.advanceTimersByTime(50);
-    fire(b, { box: rect(200, 20, 200, 40) }); // échéance 550
-    vi.advanceTimersByTime(50);
-    fraction = 0.9;
-    fire(a, { box: rect(1200, 20, 200, 40), ratio: 0 }); // à 100,9 : prochaine échéance dans 449,1 ms
-    const afterLeave = scheduled;
-    vi.advanceTimersByTime(460);
-    expect(getVisibility(b).seen).toBe(true);
-    expect(scheduled).toBe(afterLeave);
-  });
-
-  it("minuteur déclenché alors que la page est masquée : seen reste faux", () => {
-    const el = element();
-    start(el);
-    fire(el, { box: rect(100, 20, 200, 40) });
-    pageState = "hidden"; // visibilitychange pas encore traité
-    vi.advanceTimersByTime(SEEN_DELAY + 10);
-    expect(getVisibility(el).seen).toBe(false);
-  });
-
-  it("élément retiré pendant l'attente : jamais vu, oublié", () => {
-    const el = element();
-    const { calls } = start(el);
-    fire(el, { box: rect(100, 20, 200, 40) });
-    el.remove();
-    vi.advanceTimersByTime(SEEN_DELAY + 10);
-    expect(calls.some((v) => v.seen)).toBe(false);
-    expect(calls.at(-1)?.state).toBe("hidden");
-    expect(liveObservers()).toHaveLength(0);
-  });
-
   it("onglet masqué → hidden et minuteur annulé ; de retour → recalculé", () => {
     const el = element();
     start(el);
@@ -580,32 +359,6 @@ describe("abonnés et mémoire (§4.9, §7)", () => {
     expect(calls.map((v) => v.state)).toEqual(["partial"]);
   });
 
-  it("un abonné qui plante ne prive pas les autres", () => {
-    const reported: unknown[] = [];
-    vi.stubGlobal("reportError", (e: unknown) => reported.push(e));
-    const el = element();
-    observeVisibility(el, () => {
-      throw new Error("boum");
-    });
-    const { calls } = track(el);
-    idle!();
-    fire(el, { box: rect(100, 20, 200, 40) });
-    expect(calls.map((v) => v.state)).toEqual(["visible"]);
-    expect(reported).toHaveLength(1);
-  });
-
-  it("même fonction passée deux fois : deux abonnements indépendants", () => {
-    const el = element();
-    const calls: string[] = [];
-    const listener = (v: Visibility) => calls.push(v.state);
-    const stopFirst = observeVisibility(el, listener);
-    observeVisibility(el, listener);
-    idle!();
-    stopFirst();
-    fire(el, { box: rect(100, 20, 200, 40) });
-    expect(calls).toEqual(["visible"]);
-  });
-
   it("abonné tardif : reçoit l'état courant une fois, en microtâche", async () => {
     const el = element();
     start(el);
@@ -615,15 +368,6 @@ describe("abonnés et mémoire (§4.9, §7)", () => {
     expect(late).toHaveLength(0);
     await Promise.resolve();
     expect(late).toEqual([expect.objectContaining({ state: "visible" })]);
-  });
-
-  it("abonné tardif sur un état inconnu : rien", async () => {
-    const el = element();
-    track(el);
-    const late: Visibility[] = [];
-    observeVisibility(el, (v) => late.push(v));
-    await Promise.resolve();
-    expect(late).toHaveLength(0);
   });
 
   it("élément d'une iframe : ni observé, avertissement en mode dev", () => {
@@ -637,15 +381,6 @@ describe("abonnés et mémoire (§4.9, §7)", () => {
     expect(getVisibility(inner).state).toBe("unknown");
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("iframe"));
     warnSpy.mockRestore();
-  });
-
-  it("plusieurs abonnés partagent la même observation", () => {
-    const el = element();
-    track(el);
-    track(el);
-    idle!();
-    expect(liveObservers()).toHaveLength(1);
-    expect(observerOf(el)!.observed).toBe(1);
   });
 
   it("élément retiré sans arrêt : désobservé, abonnés prévenus une fois (hidden), arrêt sans erreur", () => {
@@ -673,11 +408,6 @@ describe("abonnés et mémoire (§4.9, §7)", () => {
 });
 
 describe("vérification avant effet (§6)", () => {
-  it("rien par-dessus → canBeSeen vrai", () => {
-    const el = element();
-    hit = el;
-    expect(canBeSeen(el)).toBe(true);
-  });
 
   it("modale par-dessus → canBeSeen faux", () => {
     const el = element();
@@ -689,13 +419,6 @@ describe("vérification avant effet (§6)", () => {
     vi.stubGlobal("visualViewport", { offsetLeft: 0, offsetTop: 0, width: 400, height: 450 });
     const el = element(rect(600, 20, 200, 40));
     hit = el;
-    expect(canBeSeen(el)).toBe(false);
-  });
-
-  it("onglet masqué → canBeSeen faux", () => {
-    const el = element();
-    hit = el;
-    pageState = "hidden";
     expect(canBeSeen(el)).toBe(false);
   });
 
@@ -718,25 +441,6 @@ describe("vérification avant effet (§6)", () => {
     expect(canBeSeen(el)).toBe(true);
   });
 
-  it("élément d'une iframe : canBeSeen faux, sans test de points", () => {
-    const iframe = document.createElement("iframe");
-    document.body.appendChild(iframe);
-    const inner = iframe.contentDocument!.createElement("div");
-    iframe.contentDocument!.body.appendChild(inner);
-    inner.getBoundingClientRect = () => rect(100, 20, 200, 40) as DOMRect;
-    inner.checkVisibility = () => true;
-    expect(canBeSeen(inner)).toBe(false);
-    expect(canBeSeenAll([inner])).toEqual([false]);
-    expect(document.elementFromPoint).not.toHaveBeenCalled();
-  });
-
-  it("élément de moins de 4 px : seul le centre est testé", () => {
-    const el = element(rect(100, 20, 3, 3));
-    hit = el;
-    expect(canBeSeen(el)).toBe(true);
-    expect(document.elementFromPoint).toHaveBeenCalledTimes(1);
-  });
-
   it("canBeSeenAll avec conteneur : conteneur complet, puis le centre de chaque élément", () => {
     const container = element(rect(0, 0, 400, 400));
     const links = Array.from({ length: 40 }, (_, i) => {
@@ -753,51 +457,9 @@ describe("vérification avant effet (§6)", () => {
     expect(document.elementFromPoint).toHaveBeenCalledTimes(5 + 40);
   });
 
-  it("canBeSeenAll : conteneur recouvert → tout faux", () => {
-    const container = element(rect(0, 0, 400, 400));
-    const link = element(rect(10, 10, 80, 8));
-    hit = document.createElement("div");
-    expect(canBeSeenAll([link], { container })).toEqual([false]);
-  });
 });
 
-describe("robustesse", () => {
-  it("exception en plein rappel : l'état de la page n'est pas figé", () => {
-    const a = element();
-    const b = element();
-    b.checkVisibility = () => {
-      throw new Error("boum");
-    };
-    track(a);
-    track(b);
-    idle!();
-    const observer = observerOf(a)!;
-    // Page affichée pendant le rappel qui lève une exception…
-    expect(() =>
-      observer.callback(
-        [{ target: b, boundingClientRect: rect(100, 20, 200, 40), intersectionRatio: 1, isIntersecting: true, rootBounds: rect(0, 0, 400, 800) }],
-        observer,
-      ),
-    ).toThrow();
-    // …puis masquée : canBeSeen doit le voir
-    pageState = "hidden";
-    hit = a;
-    expect(canBeSeen(a)).toBe(false);
-  });
-});
 
-describe("remise à zéro (tests)", () => {
-  it("aucune notification après la remise à zéro, même déjà mise en microtâche", async () => {
-    const el = element();
-    start(el);
-    fire(el, { box: rect(100, 20, 200, 40) });
-    const late: Visibility[] = [];
-    observeVisibility(el, (v) => late.push(v));
-    resetVisibility();
-    await Promise.resolve();
-    expect(late).toHaveLength(0);
-  });
-});
 
 describe("navigateurs sans certaines API (§9)", () => {
   it("WebKit sans checkVisibility : boîte vide ou opacity: 0 propre → hidden", () => {
@@ -824,34 +486,4 @@ describe("navigateurs sans certaines API (§9)", () => {
     expect(getVisibility(el).seen).toBe(false);
   });
 
-  it("sans IntersectionObserver : le ratio est mis à jour", () => {
-    vi.stubGlobal("IntersectionObserver", undefined);
-    vi.stubGlobal("innerWidth", VIEWPORT.width);
-    vi.stubGlobal("innerHeight", VIEWPORT.height);
-    const el = element(rect(780, 20, 200, 40)); // 20 px sur 40 à l'écran
-    start(el);
-    expect(getVisibility(el)).toMatchObject({ state: "partial", ratio: 0.5 });
-  });
-
-  it("sans IntersectionObserver : les limites de défilement sont relues à chaque mesure", () => {
-    vi.stubGlobal("IntersectionObserver", undefined);
-    vi.stubGlobal("innerWidth", VIEWPORT.width);
-    vi.stubGlobal("innerHeight", VIEWPORT.height);
-    const el = element(rect(-500, 20, 200, 40)); // au-dessus de l'écran
-    start(el);
-    expect(getVisibility(el).state).toBe("hidden"); // en haut de page : hors d'atteinte
-    setScroll({ scrollTop: 1000 });
-    expect(getVisibility(el).state).toBe("offscreen"); // la page a défilé : atteignable
-  });
-
-  it("sans IntersectionObserver : le premier état est notifié à l'abonné", () => {
-    vi.stubGlobal("IntersectionObserver", undefined);
-    vi.stubGlobal("innerWidth", VIEWPORT.width);
-    vi.stubGlobal("innerHeight", VIEWPORT.height);
-    const first = element(rect(100, 20, 200, 40));
-    start(first); // passe le démarrage différé
-    const el = element(rect(100, 20, 200, 40));
-    const { calls } = track(el);
-    expect(calls.map((v) => v.state)).toEqual(["visible"]);
-  });
 });

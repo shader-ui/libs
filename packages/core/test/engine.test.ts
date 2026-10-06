@@ -23,7 +23,7 @@ afterEach(() => {
 describe("zéro frame au repos", () => {
   it("ne crée rien et ne demande aucune frame tant qu'aucun effet n'est joué", () => {
     const t = createTestEngine();
-    light(element(), { status: "error" });
+    light(element());
     expect(t.pendingFrames).toBe(0);
     expect(t.engine.getStats()).toMatchObject({ frames: 0, renderer: "none" });
   });
@@ -114,30 +114,17 @@ describe("règles", () => {
   });
 });
 
-describe("états", () => {
-  it("l'état initial ne joue rien, seules les transitions allument", () => {
-    const t = createTestEngine();
-    const el = element();
-    const l = light(el, { status: "error" });
-    expect(el.dataset.suiStatus).toBe("error");
-    expect(t.engine.getStats().active).toBe(0);
-    l.setStatus("valid");
-    expect(el.dataset.suiStatus).toBe("valid");
-    expect(t.engine.getStats().active).toBe(1);
-  });
-
-  it("quitter loading éteint la boucle", () => {
+describe("contraste élevé (forced-colors)", () => {
+  it("aucun effet de shader, fin signalée skipped", async () => {
+    vi.stubGlobal("matchMedia", (q: string) => ({ matches: q === "(forced-colors: active)", addEventListener() {}, removeEventListener() {} }));
     const t = createTestEngine();
     const el = element();
     const events = endEvents(el);
-    const l = light(el);
-    l.setStatus("loading");
-    t.tick();
-    t.advance(500);
-    l.setStatus(undefined);
-    t.runUntilIdle();
-    expect(events).toEqual([{ name: "loading", reason: "interrupted" }]);
+    light(el).trigger("success");
+    await flush();
     expect(t.pendingFrames).toBe(0);
+    expect(events).toEqual([{ name: "success", reason: "skipped" }]);
+    vi.unstubAllGlobals();
   });
 });
 

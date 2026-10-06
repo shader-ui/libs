@@ -1,7 +1,16 @@
 import { getEngine } from "./engine.js";
 
 export { light, lightOf, EFFECT_END_EVENT } from "./light.js";
-export type { Light, LightOptions, Status, TriggerOptions, EffectEndDetail } from "./light.js";
+export type { Light, TriggerOptions, EffectEndDetail } from "./light.js";
+export { watchField, fieldOf, TYPING_PAUSE } from "./field.js";
+export type { Field, FieldState } from "./field.js";
+export { watchButton, buttonOf } from "./button.js";
+export type { Button, SendResult } from "./button.js";
+export { watchForm, formOf, INVALID_WAIT, ERROR_STAGGER, READY_REPEAT, GUIDE_HOVER } from "./form.js";
+export type { FormController, FormOptions } from "./form.js";
+export { watchChoice, TRAIL_MAX } from "./choice.js";
+export type { Choice, ChoiceState } from "./choice.js";
+export { legendOf, underline } from "./underline.js";
 export { getEngine, setEngine, Engine } from "./engine.js";
 export type { EndReason, Origin, PlayOptions, Stats, EngineOptions } from "./engine.js";
 export { registerEffect, getEffect, sampleEffect, MAX_LOOP_DURATION } from "./effects.js";

@@ -1,8 +1,15 @@
 {
   "name": "@shader-ui/react",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Shader UI pour React et Next.js.",
   "license": "MIT",
+  "homepage": "https://shader-ui.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shader-ui/libs.git",
+    "directory": "packages/react"
+  },
+  "bugs": "https://github.com/shader-ui/libs/issues",
   "type": "module",
   "sideEffects": [
     "**/*.css"
@@ -20,12 +27,14 @@
     "dist"
   ],
   "scripts": {
+    "prepack": "cp ../../README.md ../../LICENSE .",
+    "postpack": "rm -f README.md LICENSE",
     "prepublishOnly": "npm run build --prefix ../core && npm run build",
     "build": "rm -rf dist && tsc -p tsconfig.json && cp ../core/src/styles.css dist/styles.css",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@shader-ui/core": "^0.1.0"
+    "@shader-ui/core": "^0.1.2"
   },
   "peerDependencies": {
     "react": ">=18"

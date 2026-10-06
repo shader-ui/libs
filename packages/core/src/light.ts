@@ -3,16 +3,6 @@ import { getEngine, type EndReason, type Origin } from "./engine.js";
 import { warn } from "./env.js";
 import type { ColorToken } from "./tokens.js";
 
-/** États décrits par le dev. La lumière en découle, jamais l'inverse. */
-export type Status = "error" | "valid" | "loading";
-
-/** Effet joué quand l'élément entre dans un état. */
-const STATUS_EFFECT: Record<Status, string> = {
-  error: "error",
-  valid: "success",
-  loading: "loading",
-};
-
 export const EFFECT_END_EVENT = "sui:effectend";
 
 export interface EffectEndDetail {
@@ -23,52 +13,50 @@ export interface EffectEndDetail {
 export interface TriggerOptions {
   color?: ColorToken | string;
   origin?: Origin;
+  /** Identifiant de vague : les effets d'une même vague comptent pour un seul départ. */
+  wave?: string;
+  /** Boîte dessinée, si ce n'est pas celle de l'élément (l'étendue du texte pour un trait). */
+  box?: () => DOMRect;
+  /** Arc dans le sens antihoraire (RTL). */
+  reverse?: boolean;
 }
 
+/**
+ * Porteur d'effets d'un élément. L'état n'est jamais déclaré ici : il est lu dans le HTML
+ * par les contrôleurs (`watchField`…), qui décident de la lumière (spec Formulaire, principe 9).
+ */
 export interface Light {
   readonly element: HTMLElement;
-  readonly status: Status | undefined;
   /** Joue un effet. La fin est signalée par l'événement `sui:effectend`, même s'il est ignoré. */
   trigger(effect: string | EffectDefinition, options?: TriggerOptions): void;
-  /** Change d'état. Seules les transitions jouent un effet, jamais l'état initial. */
-  setStatus(status: Status | undefined): void;
   /** Arrête l'effet en cours (fondu pour une boucle). */
   stop(): void;
   destroy(): void;
 }
 
-export interface LightOptions {
-  status?: Status;
-}
-
 const lights = new WeakMap<Element, Light>();
 
 /** Ajoute la bordure lumineuse à un élément existant. */
-export function light(element: HTMLElement, options: LightOptions = {}): Light {
+export function light(element: HTMLElement): Light {
   lights.get(element)?.destroy();
   const engine = getEngine();
-  let status: Status | undefined;
 
   const dispatchEnd = (name: string, reason: EndReason) => {
     const detail: EffectEndDetail = { name, reason };
     element.dispatchEvent(new CustomEvent(EFFECT_END_EVENT, { detail, bubbles: true }));
   };
 
-  const applyStatus = (next: Status | undefined) => {
-    status = next;
-    if (next) element.dataset.suiStatus = next;
-    else delete element.dataset.suiStatus;
-  };
-
   const handle: Light = {
     element,
 
-    get status() {
-      return status;
-    },
-
     trigger(effect, triggerOptions = {}) {
       const name = typeof effect === "string" ? effect : "custom";
+      // Élément désactivé ou en lecture seule : aucun effet, la fin est quand même signalée
+      const control = element as Partial<HTMLInputElement>;
+      if (control.disabled === true || control.readOnly === true) {
+        queueMicrotask(() => dispatchEnd(name, "skipped"));
+        return;
+      }
       const base = typeof effect === "string" ? getEffect(effect) : effect;
       if (!base) {
         warn(`effet inconnu : « ${name} ».`);
@@ -78,16 +66,11 @@ export function light(element: HTMLElement, options: LightOptions = {}): Light {
       const def = triggerOptions.color ? { ...base, color: triggerOptions.color } : base;
       engine.play(element, def, {
         origin: triggerOptions.origin,
+        wave: triggerOptions.wave,
+        box: triggerOptions.box,
+        reverse: triggerOptions.reverse,
         onEnd: (reason) => dispatchEnd(name, reason),
       });
-    },
-
-    setStatus(next) {
-      if (next === status) return;
-      const previous = status;
-      applyStatus(next);
-      if (previous === "loading") engine.stop(element);
-      if (next) handle.trigger(STATUS_EFFECT[next]);
     },
 
     stop() {
@@ -97,13 +80,11 @@ export function light(element: HTMLElement, options: LightOptions = {}): Light {
     destroy() {
       engine.cancel(element);
       delete element.dataset.sui;
-      applyStatus(undefined);
       if (lights.get(element) === handle) lights.delete(element);
     },
   };
 
   element.dataset.sui = "";
-  applyStatus(options.status);
   lights.set(element, handle);
   return handle;
 }

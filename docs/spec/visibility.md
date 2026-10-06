@@ -342,46 +342,34 @@ Ces replis ne concernent pas que de vieux navigateurs : un iPhone bloqué sur iO
 
 ## 10. Tests de conformité
 
-Une implémentation DOIT couvrir au minimum :
+Seulement l'essentiel : ce qui protège l'utilisateur, les garanties du module, et les règles subtiles ou qui ont déjà cassé. Une implémentation DOIT couvrir au minimum :
 
-| Cas | État attendu |
+| Cas | Attendu |
 |---|---|
-| Avant le premier rappel de l'observer | `unknown` |
-| Parent en `display: none` | `hidden` |
-| Parent en `visibility: hidden`, ou `opacity: 0`, à l'écran | `hidden` |
-| `<details>` fermé, `<dialog>` fermé | `hidden` |
-| Onglet masqué | `hidden` |
+| Avant le premier moment libre | `unknown`, aucun observer créé |
+| Sans `requestIdleCallback` (Safari) | démarrage au `load`, 1 000 ms au plus |
+| Parent en `display: none` ; en `visibility: hidden` ou `opacity: 0`, à l'écran | `hidden` |
 | Sous l'écran | `offscreen` |
-| `position: absolute; left: -9999px` | `hidden` (hors d'atteinte) |
-| Page en `overflow-x: hidden`, élément au-delà du bord droit | `hidden` (hors d'atteinte) |
-| Page en RTL, élément à gauche atteignable en défilant | `offscreen` |
-| `sr-only` (1 × 1 px) à l'écran | `hidden` |
-| `clip-path: inset(50%)` sur l'élément, taille normale, à l'écran | `hidden` |
-| Lien d'évitement en `left: -9999px`, ramené à l'écran au focus | `visible` |
-| `sr-only-focusable` qui grandit sur place au focus | `visible`, sans défilement |
-| Aucun élément masqué suivi | aucun `ResizeObserver` |
-| Coupé par un conteneur qui défile | `offscreen` ou `partial` selon la partie visible |
-| Petit élément entièrement à l'écran | `visible` |
-| Élément plus haut que l'écran, occupant 60 % de sa hauteur | `visible` |
+| Petit élément entier / à moitié à l'écran | `visible` / `partial` |
 | Élément 5 fois plus haut que l'écran, occupant 55 % de sa hauteur | `visible` |
-| Élément coupé, occupant 20 % de la hauteur | `partial` |
-| Seuils d'un petit élément | `[0, 0.99]` |
-| Seuils d'un élément de 3 écrans de haut | `[0, 0.17]` |
+| `left: -9999px` | `hidden` (hors d'atteinte) |
+| Page en RTL, élément à gauche atteignable | `offscreen` |
+| `sr-only` à l'écran ; `clip-path: inset(50%)` | `hidden` |
+| `sr-only-focusable` qui grandit ; lien d'évitement ramené au focus | `visible` |
+| 100 éléments | 2 seuils chacun, petits éléments sur un seul observer |
+| Élément de 3 écrans de haut | seuils `[0, 0.17]` |
 | Hauteur de l'écran qui varie de 10 % (barre d'adresse) | pas de reclassement |
-| Rotation de l'écran | éléments réobservés, seuils recalculés |
-| 100 éléments observés, quelle que soit leur taille | 2 seuils chacun, petits éléments sur un seul observer |
-| 50 éléments en attente de `seen` | un seul minuteur actif |
-| `visible` pendant 400 ms puis sorti | `seen` jamais vrai |
-| `visible` pendant 600 ms | `seen` vrai |
-| `observeVisibility` appelé pendant le chargement | `unknown` jusqu'au premier moment libre (1 000 ms au plus) |
-| Élément retiré du document sans appel à la fonction d'arrêt | désobservé, abonnés prévenus une fois (`hidden`), fonction d'arrêt sans erreur |
-| Modale par-dessus | `canBeSeen` faux, effet `skipped` |
-| Champ caché sous le clavier virtuel | `canBeSeen` faux |
-| Élément de moins de 4 px | `canBeSeen` ne teste que le centre |
-| `canBeSeenAll` sur 40 éléments | un seul calcul de mise en page |
-| Dernier élément désobservé | aucun observer ni minuteur restant |
-| Retour arrière depuis le cache (`pageshow` persisté) | éléments réobservés |
-| WebKit sans `checkVisibility` | replis du §9, mêmes résultats sur les cas ci-dessus |
+| `visible` 400 ms puis sorti / 600 ms | `seen` faux / vrai |
+| 50 éléments en attente de `seen` | un seul minuteur |
+| Onglet masqué, puis de nouveau affiché | `hidden` et minuteur annulé, puis recalculé |
+| Ratio qui change sans changement d'état | listener non appelé |
+| Abonné tardif | état courant reçu une fois |
+| Élément d'une iframe | ni observé, avertissement en mode dev |
+| Élément retiré sans arrêt ; dernier élément désobservé | désobservé, prévenu une fois ; plus aucun observer ni minuteur |
+| Modale par-dessus ; champ sous le clavier virtuel | `canBeSeen` faux, effet `skipped` |
+| Shadow DOM ; cible en `pointer-events: none` | `canBeSeen` vrai |
+| `canBeSeenAll` avec conteneur | conteneur complet, puis le centre de chaque élément |
+| WebKit sans `checkVisibility` ; sans `IntersectionObserver` | replis du §9, `seen` faux sans observer |
 | Côté serveur | `unknown`, `canBeSeen` et `canBeSeenAll` faux |
 
 ---

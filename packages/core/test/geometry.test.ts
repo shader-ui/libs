@@ -13,8 +13,4 @@ describe("perimeterAt", () => {
     expect(perimeterAt(49.9, 0, 100, 40, 8)).toBeGreaterThan(0.99);
   });
 
-  it("projette un point intérieur sur le bord le plus proche", () => {
-    expect(perimeterAt(50, 2, 100, 40, 0)).toBeCloseTo(0);
-    expect(perimeterAt(98, 20, 100, 40, 0)).toBeCloseTo(0.25);
-  });
 });

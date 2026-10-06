@@ -1,8 +1,15 @@
 {
   "name": "@shader-ui/core",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Shader UI : la lumière informe. Cœur indépendant de tout framework.",
   "license": "MIT",
+  "homepage": "https://shader-ui.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shader-ui/libs.git",
+    "directory": "packages/core"
+  },
+  "bugs": "https://github.com/shader-ui/libs/issues",
   "type": "module",
   "sideEffects": [
     "**/*.css"
@@ -20,6 +27,8 @@
     "dist"
   ],
   "scripts": {
+    "prepack": "cp ../../README.md ../../LICENSE .",
+    "postpack": "rm -f README.md LICENSE",
     "prepublishOnly": "npm run build",
     "build": "rm -rf dist && tsc -p tsconfig.json && cp src/styles.css dist/styles.css",
     "typecheck": "tsc -p tsconfig.json --noEmit"

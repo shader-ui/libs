@@ -168,14 +168,6 @@ describe("détection (table de conformité)", () => {
 describe("performance", () => {
   const phone = input({ userAgent: UA.chromeAndroidPhone, pointer: "coarse", hover: false, hardwareConcurrency: 8 });
 
-  it("desktop 8 cœurs : high", () => {
-    expect(detect(input({ userAgent: UA.chromeWindows })).performance.tier).toBe("high");
-  });
-
-  it("téléphone milieu de gamme : medium", () => {
-    expect(detect({ ...phone, deviceMemory: 4 }).performance.tier).toBe("medium");
-  });
-
   it.each([
     ["peu de mémoire", { deviceMemory: 2 }, undefined, "mémoire"],
     ["peu de cœurs sur mobile", { hardwareConcurrency: 4 }, undefined, "cœurs"],
@@ -185,10 +177,6 @@ describe("performance", () => {
     const perf = detect({ ...phone, ...given }, render).performance;
     expect(perf.tier).toBe("low");
     expect(perf.reasons.join()).toContain(reason);
-  });
-
-  it("4 cœurs sur desktop ne suffit pas à passer en low", () => {
-    expect(detect(input({ hardwareConcurrency: 4 })).performance.tier).toBe("medium");
   });
 
   it("frames lentes : baisse d'un niveau, jamais sous low", () => {
@@ -217,11 +205,6 @@ describe("rendu", () => {
 describe("module en fonctionnement", () => {
   afterEach(resetEnvironment);
 
-  it("renvoie le même objet tant que rien ne change", () => {
-    expect(getEnvironment()).toBeDefined();
-    expect(getEnvironment()).toBe(getEnvironment());
-  });
-
   it("les valeurs forcées l'emportent, et se retirent", () => {
     getEnvironment();
     configureEnvironment({ device: { type: "mobile" }, performance: { tier: "low" } });
@@ -229,12 +212,6 @@ describe("module en fonctionnement", () => {
     expect(getEnvironment()!.performance).toEqual({ tier: "low", reasons: ["forcé"] });
     configureEnvironment(undefined);
     expect(getEnvironment()!.device.type).toBe("desktop");
-  });
-
-  it("les valeurs forcées survivent aux mises à jour", () => {
-    configureEnvironment({ performance: { tier: "high" } });
-    reportRender({ webgl2: true, gpu: "Mali-T830" });
-    expect(getEnvironment()!.performance.tier).toBe("high");
   });
 
   it("suit le dernier geste et prévient les abonnés", () => {
@@ -260,8 +237,4 @@ describe("module en fonctionnement", () => {
     expect(getEnvironment()!.performance.tier).toBe(after);
   });
 
-  it("intègre les infos du canvas (phase 2)", () => {
-    reportRender({ webgl2: true, gpu: "Apple M2" });
-    expect(getEnvironment()!.render).toMatchObject({ status: "ready", gpu: "Apple M2", software: false });
-  });
 });

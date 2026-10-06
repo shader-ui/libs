@@ -2,25 +2,75 @@
  * Shader UI : styles statiques. La lumière double l'information, ne la porte jamais seule :
  * ces bordures restent visibles sans shader (WCAG 1.4.11, contraste 3:1 minimum).
  * Spécificité nulle (:where) : tout se surcharge depuis Tailwind, shadcn/ui ou Bootstrap.
+ * Exception : le rendu de l'état d'un champ (bordure, diode) porte le sens. Il a une vraie
+ * spécificité, pour l'emporter sur le style de base du site (`input { border; background }`) ;
+ * il se surcharge en ciblant [data-sui-state], ou se retire avec --sui-diode: none.
  */
 :where(:root) {
   /* Couleurs de la lumière */
   --sui-color-accent: #8b5cf6;
   --sui-color-success: #22c55e;
   --sui-color-error: #ff6f61;
+  /* Blanc neutre : ni guider, ni valider, ni signaler une erreur (spec Formulaire §2.2) */
+  --sui-color-neutral: #ffffff;
   /* Bordures et focus. Dark mode first : contrastées à 3:1 minimum sur fond sombre.
      Sur un site clair, surcharger ces variables (ex. #c62828, #15803d, #6d28d9). */
   --sui-border-accent: #a78bfa;
   --sui-border-success: #22c55e;
   --sui-border-error: #ff6f61;
   --sui-focus: var(--sui-border-accent);
+  /* Diode des champs : distance au bord de fin. `--sui-diode: none` la retire. */
+  --sui-diode-inset: 18px;
 }
 
-:where([data-sui-status="error"]) {
-  border-color: var(--sui-border-error);
+/* Champ (spec Formulaire §3.3, §3.4). État lu dans le HTML par watchField, posé en data-sui-state. */
+:where(input[data-sui-field]) {
+  /* En dessous de 16 px, iOS zoome au focus */
+  font-size: max(16px, 1em);
+  min-height: 44px;
+  --sui-diode-color: transparent;
 }
-:where([data-sui-status="valid"]) {
+/* Place réservée à la diode : le texte ne passe jamais dessous, et ne saute pas quand elle s'allume */
+input[data-sui-field] {
+  padding-inline-end: calc(var(--sui-diode-inset) * 2);
+}
+/* Bouton (§4.3) : la diode n'existe que pendant l'envoi, violette, fixe au-delà de 5 s */
+:where(button[data-sui-button]) {
+  --sui-diode-color: transparent;
+}
+button[data-sui-button][data-sui-state="loading"] {
+  --sui-diode-color: var(--sui-border-accent);
+}
+/* La diode, dessinée en CSS : le shader ne la dessine pas, il faudrait redessiner à chaque défilement */
+:is(input[data-sui-field], button[data-sui-button])[data-sui-state] {
+  background-image: var(
+    --sui-diode,
+    radial-gradient(
+      circle closest-side,
+      var(--sui-diode-color) 0 38%,
+      color-mix(in srgb, var(--sui-diode-color) 35%, transparent) 60%,
+      transparent 100%
+    )
+  );
+  background-repeat: no-repeat;
+  background-size: 16px 16px;
+  background-position: right calc(var(--sui-diode-inset) - 8px) center;
+}
+:is(input[data-sui-field], button[data-sui-button])[data-sui-state]:dir(rtl) {
+  background-position: left calc(var(--sui-diode-inset) - 8px) center;
+}
+/* Pas seulement la couleur : l'erreur épaissit la bordure, sans décaler la mise en page */
+input[data-sui-field][data-sui-state="error"] {
+  --sui-diode-color: var(--sui-border-error);
+  border-color: var(--sui-border-error);
+  box-shadow: inset 0 0 0 1px var(--sui-border-error);
+}
+input[data-sui-field][data-sui-state="valid"] {
+  --sui-diode-color: var(--sui-border-success);
   border-color: var(--sui-border-success);
+}
+input[data-sui-field][data-sui-state="loading"] {
+  --sui-diode-color: var(--sui-border-accent);
 }
 
 :where([data-sui]):focus-visible {
@@ -35,6 +85,10 @@
 :where([data-sui-fx="orbit"]) {
   animation: sui-fx-breathe var(--sui-fx-duration, 1400ms) ease-in-out infinite;
 }
+/* Trait sous un label ou une legend : un liseré qui apparaît sous le texte, puis s'éteint */
+:where([data-sui-fx="underline"]) {
+  animation: sui-fx-underline var(--sui-fx-duration, 500ms) ease-out 1;
+}
 
 @keyframes sui-fx-pulse {
   from {
@@ -45,9 +99,167 @@
   }
 }
 
+@keyframes sui-fx-underline {
+  from {
+    box-shadow: 0 2px 0 0 var(--sui-fx-color);
+  }
+  to {
+    box-shadow: 0 2px 0 0 transparent;
+  }
+}
+
 @keyframes sui-fx-breathe {
   50% {
     box-shadow: 0 0 0 2px var(--sui-fx-color);
+  }
+}
+
+/* Checkbox et Radio (spec Formulaire §5.1) : éteint ou allumé, en blanc neutre. L'allumage est
+   une transition CSS, sans shader. Vraie spécificité : le sens l'emporte sur le style de base du site. */
+input[data-sui-choice] {
+  --sui-checked: var(--sui-color-checked, var(--sui-color-neutral));
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  display: inline-grid;
+  place-content: center;
+  inline-size: 20px;
+  block-size: 20px;
+  margin: 2px;
+  padding: 0;
+  border: 2px solid var(--sui-border-off, #8a8a99);
+  border-radius: 5px;
+  background: transparent;
+  vertical-align: middle;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+input[data-sui-choice][type="radio"] {
+  border-radius: 50%;
+}
+/* Zone de clic d'au moins 24 px, 44 px au doigt, sans changer le dessin */
+input[data-sui-choice]::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+}
+@media (pointer: coarse) {
+  input[data-sui-choice]::before {
+    inset: -12px;
+  }
+}
+/* Case cochée : remplie de lumière, avec son halo. Rempli ou vide : une forme, pas seulement une couleur */
+input[data-sui-choice][type="checkbox"]:checked {
+  border-color: var(--sui-checked);
+  background-color: var(--sui-checked);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--sui-checked) 55%, transparent);
+}
+/* Intermédiaire : une barre allumée ; radio : un point allumé */
+input[data-sui-choice]::after {
+  content: "";
+  inline-size: 10px;
+  block-size: 10px;
+  border-radius: 50%;
+  background: var(--sui-checked);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--sui-checked) 60%, transparent);
+  transform: scale(0);
+  transition: transform 150ms ease;
+}
+input[data-sui-choice][type="checkbox"]::after {
+  block-size: 2px;
+  border-radius: 1px;
+}
+input[data-sui-choice][type="checkbox"]:indeterminate {
+  border-color: var(--sui-checked);
+}
+input[data-sui-choice][type="checkbox"]:indeterminate::after,
+input[data-sui-choice][type="radio"]:checked::after {
+  transform: scale(1);
+}
+input[data-sui-choice][type="radio"]:checked {
+  border-color: var(--sui-checked);
+}
+/* Case obligatoire cochée (§5.4) : allumée en vert, une case facultative reste blanche */
+input[data-sui-choice][data-sui-state="valid"] {
+  --sui-checked: var(--sui-border-success);
+}
+/* Trajet entre radios (§5.3) : le nouveau radio s'allume quand la lumière arrive */
+input[data-sui-choice][type="radio"][data-sui-pending]::after {
+  transform: scale(0);
+}
+input[data-sui-choice][type="radio"][data-sui-pending] {
+  border-color: var(--sui-border-off, #8a8a99);
+}
+/* Erreur : la case sert de diode ; un groupe en erreur colore toutes ses cases */
+input[data-sui-choice][data-sui-state="error"],
+fieldset[aria-invalid]:not([aria-invalid="false"]) input[data-sui-choice] {
+  border-color: var(--sui-border-error);
+}
+input[data-sui-choice]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Mode init (spec Formulaire §2.2) : une lueur blanche après le label d'un champ obligatoire, tant qu'il
+   est vide. CSS seul, zéro frame. Remplace un éventuel ::after du site ; --sui-required: none la retire. */
+[data-sui-required]::after {
+  content: var(--sui-required, "");
+  display: inline-block;
+  inline-size: 6px;
+  block-size: 6px;
+  margin-inline-start: 0.4em;
+  border-radius: 50%;
+  vertical-align: middle;
+  background: var(--sui-color-neutral);
+  box-shadow: 0 0 6px 1px color-mix(in srgb, var(--sui-color-neutral) 60%, transparent);
+  opacity: 0;
+  /* Elle apparaît en montant : un léger mouvement venu du bas */
+  transform: translateY(12px);
+  transition:
+    opacity 350ms ease,
+    transform 500ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+[data-sui-required="on"]::after {
+  opacity: 1;
+  transform: none;
+}
+/* Renseigné : elle s'éteint sur place, sans mouvement */
+[data-sui-required="off"]::after {
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-sui-required]::after {
+    transform: none;
+  }
+}
+
+/* Contraste élevé : couleurs système, pas de shader. La diode devient un bord épais, double en erreur. */
+@media (forced-colors: active) {
+  /* Contrôle natif du système : avec appearance: none, la case disparaîtrait */
+  input[data-sui-choice] {
+    appearance: auto;
+    -webkit-appearance: auto;
+  }
+  input[data-sui-choice]::after {
+    content: none;
+  }
+  [data-sui-required]::after {
+    background: CanvasText;
+    box-shadow: none;
+  }
+  input[data-sui-field][data-sui-state] {
+    background-image: none;
+    border-inline-end: 6px solid CanvasText;
+  }
+  button[data-sui-button][data-sui-state] {
+    background-image: none;
+    border-inline-end: 6px solid ButtonText;
+  }
+  input[data-sui-field][data-sui-state="error"] {
+    border-inline-end-style: double;
   }
 }
 

@@ -12,6 +12,8 @@ export interface Instance {
   origin: number;
   progress: number;
   tail: number;
+  /** Sens de l'arc : 1 horaire, -1 antihoraire (RTL). */
+  dir: number;
   r: number;
   g: number;
   b: number;
@@ -25,7 +27,7 @@ export interface Backend {
   destroy(): void;
 }
 
-export const KIND_ID = { pulse: 0, sweep: 1, ripple: 2, orbit: 3 } as const;
+export const KIND_ID = { pulse: 0, sweep: 1, ripple: 2, orbit: 3, underline: 4 } as const;
 
 /** Selon le niveau de performance : résolution max du canvas, zone dessinée autour du contour et largeur du halo (px CSS). */
 const QUALITY: Record<Tier, { dpr: number; margin: number; halo: number }> = {
@@ -48,6 +50,7 @@ flat out vec2 vB;
 flat out vec4 vShape;
 flat out vec4 vColor;
 flat out float vTail;
+flat out float vDir;
 void main() {
   vec2 pos = aRect.xy - uMargin + aCorner * (aRect.zw + 2.0 * uMargin);
   vP = pos - (aRect.xy + aRect.zw * 0.5);
@@ -55,6 +58,7 @@ void main() {
   vShape = aShape;
   vColor = aColor;
   vTail = aExtra.x;
+  vDir = aExtra.y;
   gl_Position = vec4(pos.x / uViewport.x * 2.0 - 1.0, 1.0 - pos.y / uViewport.y * 2.0, 0.0, 1.0);
 }`;
 
@@ -65,6 +69,7 @@ flat in vec2 vB;
 flat in vec4 vShape;
 flat in vec4 vColor;
 flat in float vTail;
+flat in float vDir;
 uniform float uHalo;
 out vec4 outColor;
 const float HALF_PI = 1.5707963;
@@ -119,9 +124,22 @@ void main() {
   float origin = vShape.z;
   float progress = vShape.w;
   float mask = 1.0;
-  if (kind == 1) mask = arc(s, origin + progress, vTail, total);
+  if (kind == 4) {
+    // Trait sous le texte : distance au bord bas, la tête avance dans le sens de lecture
+    // (origin 0 : de gauche à droite, 1 : de droite à gauche), traîne derrière elle
+    float dx = max(abs(vP.x) - vB.x, 0.0);
+    // 2 px sous le texte : le halo ne touche pas les lettres, le contenu reste net
+    float dd = length(vec2(dx, vP.y - vB.y - 2.0));
+    edge = exp(-(dd * dd) / 2.25) + 0.5 * exp(-dd / uHalo);
+    float u = vP.x / max(2.0 * vB.x, 1.0) + 0.5;
+    if (origin > 0.5) u = 1.0 - u;
+    float behind = progress - u;
+    mask = behind < 0.0 ? exp(behind * vB.x / 3.0) : exp(-3.0 * behind / max(vTail, 0.01));
+  }
+  // Sens horaire par défaut ; antihoraire en RTL (abscisse retournée)
+  if (kind == 1 || kind == 3) mask = vDir < 0.0 ? arc(1.0 - s, 1.0 - origin + progress, vTail, total) : arc(s, origin + progress, vTail, total);
   else if (kind == 2) mask = max(arc(s, origin + progress, vTail, total), arc(1.0 - s, 1.0 - origin + progress, vTail, total));
-  else if (kind == 3) mask = arc(s, origin + progress, vTail, total);
+
 
   float a = clamp(edge * mask * vColor.a, 0.0, 1.0);
   outColor = vec4(vColor.rgb * a, a);
@@ -240,7 +258,7 @@ export function createWebGLBackend(): Backend | undefined {
       if (data.length < instances.length * FLOATS) data = new Float32Array(instances.length * FLOATS * 2);
       instances.forEach((it, i) => {
         data.set(
-          [it.x, it.y, it.w, it.h, it.radius, it.kind, it.origin, it.progress, it.r, it.g, it.b, it.intensity, it.tail, 0, 0, 0],
+          [it.x, it.y, it.w, it.h, it.radius, it.kind, it.origin, it.progress, it.r, it.g, it.b, it.intensity, it.tail, it.dir, 0, 0],
           i * FLOATS,
         );
       });

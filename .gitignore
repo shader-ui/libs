@@ -1,6 +1,10 @@
 # Dépendances
 node_modules/
 
+# Copiés dans les paquets au moment de la publication (prepack)
+packages/*/README.md
+packages/*/LICENSE
+
 # Builds
 dist/
 lab/.next/

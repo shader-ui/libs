@@ -2,9 +2,9 @@
 
 Light with purpose. Accessible UI components whose states are rendered by shaders: the light doesn't decorate, it informs.
 
-[![license](https://img.shields.io/github/license/shader-ui/libs.svg)](https://github.com/shader-ui/libs/blob/main/LICENSE)
+[![npm](https://img.shields.io/npm/v/@shader-ui/core.svg)](https://www.npmjs.com/package/@shader-ui/core) [![license](https://img.shields.io/github/license/shader-ui/libs.svg)](https://github.com/shader-ui/libs/blob/main/LICENSE)
 
-> ⚠️ **Early development**: the packages are not published on npm yet. Install them locally for now, see [Quick start](#quick-start).
+> ⚠️ **Early development** (0.x): the API may change between minor versions.
 
 Shader UI is a library, not a framework. You describe the state (`status="error"`), never the animation: the light lives on the border, doubles the information (text, icon, ARIA) and never carries it alone. At rest, the interface is still, with zero frames rendered.
 
@@ -26,9 +26,9 @@ Shader UI is a library, not a framework. You describe the state (`status="error"
 | Package | Content |
 |---|---|
 | `@shader-ui/core` | TypeScript core, WebGL2 engine, CSS fallback. Works without any framework |
-| `@shader-ui/react` | `Input`, `Button`, `Form`, `Light`, `ShaderProvider` (re-exports the core) |
+| `@shader-ui/react` | `Input`, `Button`, `Form`, `Light`, `ShaderProvider`, `useVisibility` (re-exports the core) |
 
-The normative specification lives in [`docs/spec/`](docs/spec/README.md) and prevails over the code.
+The normative specification lives in [`docs/spec/`](https://github.com/shader-ui/libs/blob/main/docs/spec/README.md) and prevails over the code.
 
 ## Quick start
 
@@ -45,14 +45,6 @@ Each project installs only the package for its framework, which brings the core 
 npm i @shader-ui/react     # React, Next.js
 npm i @shader-ui/core      # no framework (vanilla, PHP, others)
 ```
-
-Until the npm release, build the packages (`npm run build` in this repository) and install them from a local path:
-
-```sh
-npm i "file:/path/to/libs/packages/core" "file:/path/to/libs/packages/react"
-```
-
-The path to `core` is only needed locally: on npm, it will be resolved automatically.
 
 #### Setup
 
@@ -82,6 +74,7 @@ ref.current?.trigger("pulse", { color: "success" });
 - `onEffectEnd` is always called, even when the effect is skipped (`reason: "skipped"`): choreographies never get stuck.
 - `<Light>` adds the light border to any element: `<Light status="valid"><div className="card" /></Light>`.
 - Without React: `light(element, { status })` from `@shader-ui/core`.
+- Visibility: an effect never plays on an element that cannot be seen (off screen, covered by a modal, under the virtual keyboard). The module is also available on its own: `const { state, seen } = useVisibility(ref)` in React, or `observeVisibility(element, listener)` and `canBeSeen(element)`.
 
 ## Guarantees
 
@@ -95,6 +88,7 @@ ref.current?.trigger("pulse", { color: "success" });
 | Light doubles the information (WCAG 1.4.1) | `aria-invalid`, `aria-busy`, `data-sui-status`, warning if no linked error text | `components.test.tsx` |
 | 3:1 borders without shader (WCAG 1.4.11) | `styles.css`, `light-dark()` colors | — |
 | Without WebGL2 | CSS fallback, same meaning | `engine.test.ts` |
+| No light on what cannot be seen | effect skipped (`reason: "skipped"`), event-driven, zero frames | `visibility.test.ts` |
 
 ## Customization
 
@@ -147,4 +141,4 @@ Sahih al-Bukhārī 52, Sahih Muslim 1599
 
 Copyright © Shader UI contributors
 
-Licensed under the [MIT License](./LICENSE).
+Licensed under the [MIT License](https://github.com/shader-ui/libs/blob/main/LICENSE).

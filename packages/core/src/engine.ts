@@ -14,6 +14,12 @@ export type Origin = number | { x: number; y: number };
 export interface PlayOptions {
   origin?: Origin;
   onEnd?: (reason: EndReason) => void;
+  /** Effets d'une même vague (onde d'erreurs, mode init) : ils comptent pour un seul départ. */
+  wave?: string;
+  /** Boîte dessinée, relue à chaque frame (par défaut, celle de l'élément) : l'étendue du texte pour un trait. */
+  box?: () => DOMRect;
+  /** Arc dans le sens antihoraire (RTL). */
+  reverse?: boolean;
 }
 
 export interface Stats {
@@ -37,6 +43,8 @@ interface Active {
   radius: number;
   stoppedAt?: number;
   timer?: ReturnType<typeof setTimeout>;
+  box?: () => DOMRect;
+  reverse?: boolean;
   onEnd?: (reason: EndReason) => void;
 }
 
@@ -52,7 +60,7 @@ export class Engine {
   private enabled = true;
   private backend: Backend | undefined | null = null; // null = pas encore créé
   private readonly active = new Map<Element, Active>();
-  private readonly starts: number[] = [];
+  private readonly starts: Array<{ time: number; wave?: string }> = [];
   private readonly listeners = new Set<(stats: Stats) => void>();
   private frames = 0;
   private scheduled = false;
@@ -86,6 +94,8 @@ export class Engine {
   play(el: Element, definition: EffectDefinition, options: PlayOptions = {}): void {
     const skip = () => queueMicrotask(() => options.onEnd?.("skipped"));
     if (!this.enabled || !isBrowser()) return skip();
+    // Contraste élevé : les couleurs système suffisent, pas de shader (spec Formulaire §1)
+    if (typeof matchMedia === "function" && matchMedia("(forced-colors: active)").matches) return skip();
     // Une lumière que personne ne voit n'est pas jouée ; sa fin est signalée quand même
     if (!this.canBeSeen(el)) return skip();
 
@@ -94,17 +104,21 @@ export class Engine {
     if (!def) return skip();
 
     const now = this.now();
-    while (this.starts.length && now - this.starts[0]! > FLASH_WINDOW) this.starts.shift();
-    if (this.starts.length >= FLASH_LIMIT) {
-      warn("plus de 3 effets par seconde : effet ignoré (WCAG 2.3.1).");
-      return skip();
+    while (this.starts.length && now - this.starts[0]!.time > FLASH_WINDOW) this.starts.shift();
+    // Une vague déjà partie dans la fenêtre ne compte pas une deuxième fois
+    const counted = options.wave !== undefined && this.starts.some((s) => s.wave === options.wave);
+    if (!counted) {
+      if (this.starts.length >= FLASH_LIMIT) {
+        warn("plus de 3 effets par seconde : effet ignoré (WCAG 2.3.1).");
+        return skip();
+      }
+      this.starts.push({ time: now, wave: options.wave });
     }
-    this.starts.push(now);
 
     // Un seul effet à la fois par élément : le nouveau remplace l'ancien
     this.end(el, "interrupted");
 
-    const rect = el.getBoundingClientRect();
+    const rect = options.box ? options.box() : el.getBoundingClientRect();
     const radius = parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0;
     const o = options.origin ?? { x: rect.left, y: rect.top + rect.height / 2 };
     const origin = typeof o === "number" ? o : perimeterAt(o.x - rect.left, o.y - rect.top, rect.width, rect.height, radius);
@@ -115,6 +129,8 @@ export class Engine {
       origin,
       color: resolveColor(def.color, el),
       radius,
+      box: options.box,
+      reverse: options.reverse,
       onEnd: options.onEnd,
     };
     this.active.set(el, effect);
@@ -179,7 +195,7 @@ export class Engine {
         this.end(effect.el, effect.stoppedAt === undefined ? "complete" : "interrupted");
         continue;
       }
-      const rect = effect.el.getBoundingClientRect();
+      const rect = effect.box ? effect.box() : effect.el.getBoundingClientRect();
       const [r, g, b] = effect.color;
       instances.push({
         x: rect.left,
@@ -191,10 +207,11 @@ export class Engine {
         origin: effect.origin,
         progress: sample.progress,
         tail: effect.def.tail ?? 0.2,
+        dir: effect.reverse ? -1 : 1,
         r,
         g,
         b,
-        intensity: sample.intensity,
+        intensity: sample.intensity * (effect.def.intensity ?? 1),
       });
     }
 

@@ -5,7 +5,8 @@ export type EffectKind =
   | "pulse" // tout le contour s'allume puis s'éteint
   | "sweep" // un arc fait le tour une fois
   | "ripple" // deux arcs partent d'un point et se rejoignent en face
-  | "orbit"; // un arc tourne en boucle (état en cours uniquement)
+  | "orbit" // un arc tourne en boucle (état en cours uniquement)
+  | "underline"; // un trait avance sous le texte, dans le sens de lecture (label, legend)
 
 /** Un effet est une donnée : il se compile vers WebGL aujourd'hui, WGSL, HLSL ou matériaux demain. */
 export interface EffectDefinition {
@@ -19,6 +20,8 @@ export interface EffectDefinition {
   loop?: boolean;
   /** Durée max d'une boucle en ms (WCAG 2.2.2). 5000 par défaut, plafonnée à 5000. */
   maxLoopDuration?: number;
+  /** Intensité, de 0 à 1 (1 par défaut) : une simple lueur, comme les radios traversés par le trajet. */
+  intensity?: number;
 }
 
 export const MAX_LOOP_DURATION = 5000;
@@ -26,11 +29,17 @@ const FADE_OUT = 300;
 
 const presets = new Map<string, EffectDefinition>([
   ["error", { kind: "pulse", color: "error", duration: 700 }],
-  ["success", { kind: "sweep", color: "success", duration: 900, tail: 0.22 }],
+  ["success", { kind: "sweep", color: "success", duration: 1100, tail: 0.22 }],
   ["loading", { kind: "orbit", color: "accent", duration: 1400, tail: 0.3, loop: true }],
   ["pulse", { kind: "pulse", color: "accent", duration: 600 }],
   ["sweep", { kind: "sweep", color: "accent", duration: 900, tail: 0.22 }],
   ["ripple", { kind: "ripple", color: "accent", duration: 700, tail: 0.14 }],
+  // Lueur d'un radio traversé par le trajet (§5.3) : courte, faible, sans remplissage
+  ["glimmer", { kind: "pulse", color: "neutral", duration: 220, intensity: 0.35 }],
+  // Arrivée sur le radio choisi
+  ["choice", { kind: "pulse", color: "neutral", duration: 360 }],
+  // Trait sous un label ou une legend (§2.2, §5.4) ; la durée est ajustée à la largeur
+  ["underline", { kind: "underline", color: "neutral", duration: 500, tail: 0.35 }],
 ]);
 
 export function registerEffect(name: string, definition: EffectDefinition): void {
@@ -87,10 +96,14 @@ export function sampleEffect(def: EffectDefinition, t: number, stoppedAt?: numbe
     }
     case "sweep":
     case "ripple":
+    case "underline":
     case "orbit": {
       const span = def.kind === "ripple" ? 0.5 : 1;
+      // Le trait sous le texte avance à vitesse constante : le sens de lecture se lit mieux
+      if (def.kind === "underline") return { intensity: ease(Math.min(k / 0.1, 1)) * (k < 0.8 ? 1 : ease((1 - k) / 0.2)), progress: k, done };
       const intensity = ease(Math.min(k / 0.1, 1)) * (k < 0.6 ? 1 : ease((1 - k) / 0.4));
-      return { intensity, progress: decelerate(k) * span, done };
+      // Sweep : décélération douce, le tour complet reste visible ; ripple et orbit gardent la leur
+      return { intensity, progress: decelerate(k, def.kind === "sweep" ? 1.5 : 4) * span, done };
     }
   }
 }

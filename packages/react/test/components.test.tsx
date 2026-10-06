@@ -24,12 +24,12 @@ describe("Input", () => {
     expect(register).toHaveBeenCalledWith(expect.any(HTMLInputElement));
   });
 
-  it("double l'erreur dans le DOM : aria-invalid et data-sui-status", () => {
+  it("lit l'état dans le HTML : aria-invalid posé par le dev → data-sui-state", async () => {
     const { getByRole, rerender } = render(<Input aria-describedby="e" />);
-    expect(getByRole("textbox").getAttribute("aria-invalid")).toBeNull();
-    rerender(<Input aria-describedby="e" status="error" />);
-    expect(getByRole("textbox").getAttribute("aria-invalid")).toBe("true");
-    expect(getByRole("textbox").dataset.suiStatus).toBe("error");
+    expect(getByRole("textbox").dataset.suiState).toBeUndefined();
+    rerender(<Input aria-describedby="e" aria-invalid />);
+    await act(() => Promise.resolve());
+    expect(getByRole("textbox").dataset.suiState).toBe("error");
   });
 
   it("joue l'effet d'un événement et garde le gestionnaire du dev", async () => {
@@ -43,38 +43,46 @@ describe("Input", () => {
     expect(onEffectEnd).toHaveBeenCalledWith({ name: "ripple", reason: "skipped" });
   });
 
-  it("signale en dev une erreur sans texte associé (WCAG 1.4.1)", () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    render(<Input status="error" />);
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining("aria-describedby"));
-    warn.mockRestore();
-  });
 });
 
-describe("Button", () => {
-  it("loading : aria-busy, garde le focus, ignore les clics", () => {
-    const onClick = vi.fn();
-    const { getByRole } = render(<Button status="loading" onClick={onClick}>Continuer</Button>);
-    const button = getByRole("button");
-    expect(button.getAttribute("aria-busy")).toBe("true");
-    expect(button.hasAttribute("disabled")).toBe(false);
-    fireEvent.click(button);
-    expect(onClick).not.toHaveBeenCalled();
-  });
-});
 
 describe("Form", () => {
-  it("n'allume que le premier champ invalide", () => {
+  it("champs invalides : onde, le premier d'abord, une fois visible (1 s au plus)", async () => {
+    vi.useFakeTimers();
     const { container } = render(
       <Form>
-        <Input name="a" required />
-        <Input name="b" required />
+        <Input name="a" required aria-describedby="e" />
+        <Input name="b" required aria-describedby="e" />
       </Form>,
     );
     act(() => container.querySelector("form")!.checkValidity());
+    // jsdom ne calcule pas la visibilité : l'onde attend son plafond (1 s), puis 150 ms par champ
+    await act(() => vi.advanceTimersByTimeAsync(1200));
     const [a, b] = container.querySelectorAll("input");
     expect(a!.dataset.suiFx).toBe("pulse");
-    expect(b!.dataset.suiFx).toBeUndefined();
+    expect(b!.dataset.suiFx).toBe("pulse");
+    vi.useRealTimers();
+  });
+
+  it("onSubmit qui renvoie une promesse : aria-busy sur le bouton, double envoi ignoré", async () => {
+    let resolve!: () => void;
+    const onSubmit = vi.fn((e: { preventDefault(): void }) => {
+      e.preventDefault();
+      return new Promise<void>((r) => (resolve = r));
+    });
+    const { getByRole } = render(
+      <Form onSubmit={onSubmit}>
+        <Button type="submit">Envoyer</Button>
+      </Form>,
+    );
+    const button = getByRole("button");
+    fireEvent.click(button);
+    fireEvent.click(button);
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(button.getAttribute("aria-busy")).toBe("true");
+    expect(button.hasAttribute("disabled")).toBe(false);
+    await act(async () => resolve());
+    expect(button.hasAttribute("aria-busy")).toBe(false);
   });
 });
 
@@ -82,12 +90,12 @@ describe("Light", () => {
   it("s'applique à un élément existant et conserve sa ref", () => {
     const ref = createRef<HTMLDivElement>();
     const { container } = render(
-      <Light status="valid">
+      <Light>
         <div ref={ref} className="card" />
       </Light>,
     );
     expect(ref.current).toBe(container.querySelector(".card"));
-    expect(ref.current!.dataset.suiStatus).toBe("valid");
+    expect(ref.current!.dataset.sui).toBe("");
   });
 });
 

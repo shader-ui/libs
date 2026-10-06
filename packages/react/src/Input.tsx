@@ -1,23 +1,24 @@
 "use client";
 
-import { forwardRef, type InputHTMLAttributes } from "react";
-import { useErrorTextCheck, useLight, type LightProps, type ShaderElement } from "./use-light.js";
+import { watchField } from "@shader-ui/core";
+import { forwardRef, useEffect, type InputHTMLAttributes } from "react";
+import { useLight, type LightProps, type ShaderElement } from "./use-light.js";
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement>, LightProps {}
 
+/**
+ * `<input>` natif. L'état est lu dans le HTML (`aria-busy`, `aria-invalid`, validité native),
+ * jamais déclaré : la lumière en découle (spec Formulaire §3).
+ */
 export const Input = forwardRef<ShaderElement<HTMLInputElement>, InputProps>(function Input(
-  { status, effects, onEffectEnd, ...props },
+  { effects, onEffectEnd, ...props },
   forwardedRef,
 ) {
-  const { ref, eventHandlers, element } = useLight<HTMLInputElement>({ status, effects, onEffectEnd }, forwardedRef, props);
-  useErrorTextCheck(status, element);
-  return (
-    <input
-      {...props}
-      {...eventHandlers}
-      ref={ref}
-      aria-invalid={status === "error" ? true : props["aria-invalid"]}
-      aria-busy={status === "loading" ? true : props["aria-busy"]}
-    />
-  );
+  const { ref, eventHandlers, element } = useLight<HTMLInputElement>({ effects, onEffectEnd }, forwardedRef, props);
+  useEffect(() => {
+    if (!element) return;
+    const field = watchField(element);
+    return () => field.destroy();
+  }, [element]);
+  return <input {...props} {...eventHandlers} ref={ref} />;
 });

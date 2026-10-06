@@ -7,6 +7,7 @@ export const defaultTokens = {
     accent: { $type: "color", $value: "#8b5cf6" }, // violet : en cours, guidage
     success: { $type: "color", $value: "#22c55e" }, // vert : validé
     error: { $type: "color", $value: "#ff6f61" }, // corail : erreur
+    neutral: { $type: "color", $value: "#ffffff" }, // blanc neutre : obligatoire, choix coché
   },
   duration: {
     short: { $type: "duration", $value: "600ms" },
