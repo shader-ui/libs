@@ -255,16 +255,16 @@ Les **iframes** : la lib n'y touche pas. Un élément situé dans une iframe n'e
 
 ```ts
 /** Suit un élément. Renvoie la fonction pour arrêter. */
-observeVisibility(element: Element, listener: (visibility: Visibility) => void): () => void;
+declare function observeVisibility(element: Element, listener: (visibility: Visibility) => void): () => void;
 
 /** Dernier état connu (`unknown` si non observé). */
-getVisibility(element: Element): Visibility;
+declare function getVisibility(element: Element): Visibility;
 
 /** Vérification complète, au dernier moment (§6.1). */
-canBeSeen(element: Element): boolean;
+declare function canBeSeen(element: Element): boolean;
 
 /** Vérification groupée, en une seule phase de lecture (§6.2). Un résultat par élément, dans l'ordre. */
-canBeSeenAll(elements: readonly Element[], options?: { container?: Element }): boolean[];
+declare function canBeSeenAll(elements: readonly Element[], options?: { container?: Element }): boolean[];
 ```
 
 **Le module :**

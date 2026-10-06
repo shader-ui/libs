@@ -6,6 +6,16 @@
  * spécificité, pour l'emporter sur le style de base du site (`input { border; background }`) ;
  * il se surcharge en ciblant [data-sui-state], ou se retire avec --sui-diode: none.
  */
+/* Variables facultatives : sans valeur par défaut ici, leur repli s'applique tant que personne ne les pose.
+   Réglables par le dev : --sui-diode (none retire la diode), --sui-required (none retire la lueur),
+   --sui-color-checked, --sui-border-off. Posées par le moteur pendant un effet : --sui-fx-color, --sui-fx-duration. */
+@property --sui-diode { syntax: "*"; inherits: true; }
+@property --sui-required { syntax: "*"; inherits: true; }
+@property --sui-color-checked { syntax: "*"; inherits: true; }
+@property --sui-border-off { syntax: "*"; inherits: true; }
+@property --sui-fx-color { syntax: "*"; inherits: true; }
+@property --sui-fx-duration { syntax: "*"; inherits: true; }
+
 :where(:root) {
   /* Couleurs de la lumière */
   --sui-color-accent: #8b5cf6;
