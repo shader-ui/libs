@@ -1,7 +1,7 @@
 {
   "name": "@shader-ui/react",
   "version": "0.1.4",
-  "description": "Shader UI pour React et Next.js.",
+  "description": "Shader UI for React and Next.js.",
   "license": "MIT",
   "homepage": "https://shader-ui.com",
   "repository": {

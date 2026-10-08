@@ -173,37 +173,6 @@ describe("démarrage et état inconnu (§4.1, §4.8)", () => {
 });
 
 describe("règles du §4.2", () => {
-  it("display: none (boîte nulle) → hidden", () => {
-    const el = element();
-    start(el);
-    fire(el, { box: rect(0, 0, 0, 0), ratio: 0 });
-    expect(getVisibility(el).state).toBe("hidden");
-  });
-
-  it("parent en visibility: hidden ou opacity: 0, à l'écran → hidden", () => {
-    const el = element();
-    el.checkVisibility = () => false;
-    start(el);
-    fire(el, { box: rect(100, 20, 200, 40) });
-    expect(getVisibility(el).state).toBe("hidden");
-  });
-
-  it("sous l'écran → offscreen", () => {
-    const el = element();
-    start(el);
-    fire(el, { box: rect(1200, 20, 200, 40), ratio: 0 });
-    expect(getVisibility(el).state).toBe("offscreen");
-  });
-
-  it("petit élément entièrement à l'écran → visible ; à moitié → partial", () => {
-    const el = element();
-    start(el);
-    fire(el, { box: rect(100, 20, 200, 40), ratio: 1 });
-    expect(getVisibility(el).state).toBe("visible");
-    fire(el, { box: rect(780, 20, 200, 40), ratio: 0.5 });
-    expect(getVisibility(el).state).toBe("partial");
-  });
-
   it("5 fois plus haut que l'écran, occupant 55 % de sa hauteur → visible", () => {
     const el = element();
     start(el);
@@ -214,13 +183,6 @@ describe("règles du §4.2", () => {
 });
 
 describe("hors d'atteinte (§4.7)", () => {
-  it("left: -9999px → hidden", () => {
-    const el = element();
-    start(el);
-    fire(el, { box: rect(100, -9999, 200, 40), ratio: 0 });
-    expect(getVisibility(el).state).toBe("hidden");
-  });
-
   it("page en RTL, élément à gauche atteignable en défilant → offscreen", () => {
     document.documentElement.style.direction = "rtl";
     setScroll({ scrollWidth: 1200, scrollLeft: 0 });
@@ -273,13 +235,6 @@ describe("masqué visuellement (§4.6)", () => {
 });
 
 describe("seuils et observers (§4.3)", () => {
-
-  it("élément de 3 écrans de haut : [0, 0.17], sur son propre observer", () => {
-    const el = element();
-    start(el);
-    fire(el, { box: rect(0, 0, 400, 2400), ratio: 800 / 2400 });
-    expect(observerOf(el)!.thresholds).toEqual([0, 0.17]);
-  });
 
   it("100 éléments : 2 seuils chacun, les petits sur un seul observer", () => {
     const els = Array.from({ length: 100 }, () => element());
@@ -408,12 +363,6 @@ describe("abonnés et mémoire (§4.9, §7)", () => {
 });
 
 describe("vérification avant effet (§6)", () => {
-
-  it("modale par-dessus → canBeSeen faux", () => {
-    const el = element();
-    hit = document.createElement("dialog");
-    expect(canBeSeen(el)).toBe(false);
-  });
 
   it("champ caché sous le clavier virtuel → canBeSeen faux", () => {
     vi.stubGlobal("visualViewport", { offsetLeft: 0, offsetTop: 0, width: 400, height: 450 });

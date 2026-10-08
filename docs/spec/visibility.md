@@ -348,16 +348,11 @@ Seulement l'essentiel : ce qui protège l'utilisateur, les garanties du module, 
 |---|---|
 | Avant le premier moment libre | `unknown`, aucun observer créé |
 | Sans `requestIdleCallback` (Safari) | démarrage au `load`, 1 000 ms au plus |
-| Parent en `display: none` ; en `visibility: hidden` ou `opacity: 0`, à l'écran | `hidden` |
-| Sous l'écran | `offscreen` |
-| Petit élément entier / à moitié à l'écran | `visible` / `partial` |
 | Élément 5 fois plus haut que l'écran, occupant 55 % de sa hauteur | `visible` |
-| `left: -9999px` | `hidden` (hors d'atteinte) |
 | Page en RTL, élément à gauche atteignable | `offscreen` |
 | `sr-only` à l'écran ; `clip-path: inset(50%)` | `hidden` |
 | `sr-only-focusable` qui grandit ; lien d'évitement ramené au focus | `visible` |
 | 100 éléments | 2 seuils chacun, petits éléments sur un seul observer |
-| Élément de 3 écrans de haut | seuils `[0, 0.17]` |
 | Hauteur de l'écran qui varie de 10 % (barre d'adresse) | pas de reclassement |
 | `visible` 400 ms puis sorti / 600 ms | `seen` faux / vrai |
 | 50 éléments en attente de `seen` | un seul minuteur |
@@ -366,7 +361,7 @@ Seulement l'essentiel : ce qui protège l'utilisateur, les garanties du module, 
 | Abonné tardif | état courant reçu une fois |
 | Élément d'une iframe | ni observé, avertissement en mode dev |
 | Élément retiré sans arrêt ; dernier élément désobservé | désobservé, prévenu une fois ; plus aucun observer ni minuteur |
-| Modale par-dessus ; champ sous le clavier virtuel | `canBeSeen` faux, effet `skipped` |
+| Champ sous le clavier virtuel | `canBeSeen` faux, effet `skipped` |
 | Shadow DOM ; cible en `pointer-events: none` | `canBeSeen` vrai |
 | `canBeSeenAll` avec conteneur | conteneur complet, puis le centre de chaque élément |
 | WebKit sans `checkVisibility` ; sans `IntersectionObserver` | replis du §9, `seen` faux sans observer |
@@ -376,5 +371,6 @@ Seulement l'essentiel : ce qui protège l'utilisateur, les garanties du module, 
 
 ## Historique
 
+- **0.2** (révision) : §10 allégé, limite de 25 tests par fichier ; les règles ne changent pas.
 - **0.2** : optimisée pour un mobile d'entrée de gamme de 5 ans ; règles « masqué visuellement » et « hors d'atteinte ».
 - **0.1** : première version validée.

@@ -1,7 +1,7 @@
 {
   "name": "@shader-ui/core",
   "version": "0.1.4",
-  "description": "Shader UI : la lumière informe. Cœur indépendant de tout framework.",
+  "description": "Shader UI: light with purpose. Framework-agnostic core.",
   "license": "MIT",
   "homepage": "https://shader-ui.com",
   "repository": {

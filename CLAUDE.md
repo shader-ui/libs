@@ -37,7 +37,7 @@ Chaque brique suit ces étapes, dans l'ordre, sans en sauter :
 
 1. **On discute de l'algo**, sans code : approches, cas limites, appareils de demain.
 2. **Spec** écrite dans `docs/spec` (DOIT / DEVRAIT / PEUT), relue et validée avant de coder.
-3. **Code** conforme à la spec, avec ses tests de conformité. Tout écart est reporté dans la spec. On ne teste que l'essentiel : ce qui protège l'utilisateur, les garanties de la lib, et les règles subtiles ou qui ont déjà cassé.
+3. **Code** conforme à la spec, avec ses tests de conformité. Tout écart est reporté dans la spec. On ne teste que l'essentiel : ce qui protège l'utilisateur, les garanties de la lib, et les règles subtiles ou qui ont déjà cassé. **25 tests maximum par fichier** : au-delà, on élague, on ne découpe pas le fichier pour contourner la limite.
 4. **Vérification en vrai** (navigateur réel), résultat montré.
 
 Ne jamais partir direct dans le code. Une décision structurante (arborescence, API, dépendance) se pose et se valide d'abord.
