@@ -20,6 +20,8 @@ export interface PlayOptions {
   box?: () => DOMRect;
   /** Arc dans le sens antihoraire (RTL). */
   reverse?: boolean;
+  /** Avance de la tête à chaque frame dessinée (0 → 1) : un style du DOM suit la lumière à la même frame. */
+  onFrame?: (progress: number) => void;
 }
 
 export interface Stats {
@@ -45,6 +47,7 @@ interface Active {
   timer?: ReturnType<typeof setTimeout>;
   box?: () => DOMRect;
   reverse?: boolean;
+  onFrame?: (progress: number) => void;
   onEnd?: (reason: EndReason) => void;
 }
 
@@ -62,6 +65,7 @@ export class Engine {
   private readonly active = new Map<Element, Active>();
   private readonly starts: Array<{ time: number; wave?: string }> = [];
   private readonly listeners = new Set<(stats: Stats) => void>();
+  private readonly enabledListeners = new Set<(enabled: boolean) => void>();
   private frames = 0;
   private scheduled = false;
   private inFrame = false;
@@ -83,12 +87,25 @@ export class Engine {
 
   /** Interrupteur global : coupe tous les effets. Les événements de fin sont toujours émis. */
   setEnabled(enabled: boolean): void {
+    if (enabled === this.enabled) return;
     this.enabled = enabled;
     if (!enabled) for (const el of [...this.active.keys()]) this.end(el, "interrupted");
+    for (const listener of this.enabledListeners) listener(enabled);
   }
 
   isEnabled(): boolean {
     return this.enabled;
+  }
+
+  /** Prévenu quand l'interrupteur global change. */
+  onEnabledChange(listener: (enabled: boolean) => void): () => void {
+    this.enabledListeners.add(listener);
+    return () => this.enabledListeners.delete(listener);
+  }
+
+  /** Vrai si la lumière est dessinée par le shader (WebGL2), faux pour le fallback CSS. */
+  hasShader(): boolean {
+    return isBrowser() && this.getBackend() !== undefined;
   }
 
   play(el: Element, definition: EffectDefinition, options: PlayOptions = {}): void {
@@ -131,6 +148,7 @@ export class Engine {
       radius,
       box: options.box,
       reverse: options.reverse,
+      onFrame: options.onFrame,
       onEnd: options.onEnd,
     };
     this.active.set(el, effect);
@@ -213,6 +231,7 @@ export class Engine {
         b,
         intensity: sample.intensity * (effect.def.intensity ?? 1),
       });
+      effect.onFrame?.(sample.progress);
     }
 
     // Une dernière frame pour effacer, puis plus rien : zéro frame au repos

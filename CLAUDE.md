@@ -24,6 +24,9 @@ Librairie (pas un framework) de composants d'interface dont les états sont rend
 ## Architecture
 
 - **DOM pour le sens, GPU pour la peinture** : éléments HTML natifs (a11y, formulaires, SSR).
+- **Styles** : le JS pose des attributs d'état (`data-sui-*`) et, en inline, seulement des valeurs calculées (variables `--sui-*`). Tout le rendu est dans `styles.css`, jamais de style visuel en inline : retirer l'attribut rend au site son style.
+  - `:where()` (spécificité nulle) pour ce qui décore ; vraie spécificité (attribut doublé) pour ce qui porte le sens.
+  - Le site peut l'emporter (sélecteur par id, `!important`) : l'échec doit rester sûr (élément au style du site) et documenté.
 - **Un seul canvas partagé** par page (`<ShaderProvider>`), rendu à la demande.
 - **Cœur TypeScript indépendant**, bindings framework en couches fines.
 - **Effets décrits comme des données**, compilés vers WGSL/GLSL, HLSL (Unity), Godot Shading Language (Godot), matériaux (Unreal).

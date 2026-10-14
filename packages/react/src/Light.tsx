@@ -1,29 +1,51 @@
 "use client";
 
-import { Children, cloneElement, forwardRef, version, type ReactElement, type Ref } from "react";
+import type { RevealInitial } from "@shader-ui/core";
+import { Children, cloneElement, forwardRef, type ReactElement, type Ref } from "react";
+import { childRefOf, setRef } from "./child-ref.js";
+import { RevealLinks } from "./RevealLinks.js";
 import { useLight, type LightProps, type ShaderElement } from "./use-light.js";
 
 export interface LightComponentProps extends LightProps {
   /** Un seul élément DOM, qui reçoit la bordure lumineuse. */
   children: ReactElement;
+  /** Révèle le lien au lieu de lui ajouter une bordure : l'enfant doit être un `<a>` (spec Liens qui se dessinent §8). */
+  reveal?: boolean;
+  /** Avec `reveal` : apparence avant le passage, `"text"` par défaut. */
+  initial?: RevealInitial;
 }
 
-/** Ajoute la bordure lumineuse à n'importe quel élément existant. */
+/** Ajoute la bordure lumineuse à n'importe quel élément existant, ou révèle un lien (`reveal`). */
 export const Light = forwardRef<ShaderElement<HTMLElement>, LightComponentProps>(function Light(
+  { children, effects, onEffectEnd, reveal, initial },
+  forwardedRef,
+) {
+  if (reveal) {
+    return (
+      <RevealLinks ref={forwardedRef as Ref<HTMLElement>} initial={initial}>
+        {children}
+      </RevealLinks>
+    );
+  }
+  return (
+    <BorderLight ref={forwardedRef} effects={effects} onEffectEnd={onEffectEnd}>
+      {children}
+    </BorderLight>
+  );
+});
+
+const BorderLight = forwardRef<ShaderElement<HTMLElement>, LightComponentProps>(function BorderLight(
   { children, effects, onEffectEnd },
   forwardedRef,
 ) {
   const child = Children.only(children) as ReactElement<Record<string, unknown>>;
-  const childRef = (Number(version.split(".")[0]) >= 19 ? child.props.ref : (child as unknown as { ref: unknown }).ref) as
-    | Ref<HTMLElement>
-    | undefined;
+  const childRef = childRefOf<HTMLElement>(child);
   const { ref, eventHandlers } = useLight<HTMLElement>({ effects, onEffectEnd }, forwardedRef, child.props);
   return cloneElement(child, {
     ...eventHandlers,
     ref: (el: HTMLElement | null) => {
       ref(el);
-      if (typeof childRef === "function") childRef(el);
-      else if (childRef) (childRef as { current: HTMLElement | null }).current = el;
+      setRef(childRef, el);
     },
   });
 });

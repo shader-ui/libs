@@ -15,6 +15,9 @@
 @property --sui-border-off { syntax: "*"; inherits: true; }
 @property --sui-fx-color { syntax: "*"; inherits: true; }
 @property --sui-fx-duration { syntax: "*"; inherits: true; }
+@property --sui-link-light { syntax: "*"; inherits: true; }
+@property --sui-link-color { syntax: "*"; inherits: false; }
+@property --sui-link-progress { syntax: "*"; inherits: false; }
 
 :where(:root) {
   /* Couleurs de la lumière */
@@ -245,6 +248,52 @@ input[data-sui-choice]:disabled {
 @media (prefers-reduced-motion: reduce) {
   [data-sui-required]::after {
     transform: none;
+  }
+}
+
+/* Liens qui se dessinent (spec Liens qui se dessinent §6.4). État posé par revealLinks en data-sui-link ;
+   valeurs calculées en inline : --sui-link-color (couleur du site), --sui-link-progress (avancée, 0 → 1).
+   Vraie spécificité : le sens l'emporte sur `.prose a`. Un site qui l'emporte quand même (id, !important)
+   garde son style de lien : échec sûr, corrigé en ciblant [data-sui-link]. Pulsation : --sui-link-light.
+   Seules la couleur et les décorations changent : jamais la mise en page. Contraste élevé : rien. */
+@media not (forced-colors: active) {
+  /* Avant le passage : l'apparence du texte qui l'entoure */
+  a[data-sui-link][data-sui-link]:is([data-sui-link="pending"], [data-sui-link="revealing"]) {
+    color: inherit;
+    text-decoration-color: transparent;
+    border-bottom-color: transparent;
+    transition: none;
+  }
+  /* Pendant : la couleur du site dans la traînée, celle du parent devant ; suivie d'une ligne à l'autre */
+  a[data-sui-link][data-sui-link="revealing"] {
+    background: linear-gradient(to right, var(--sui-link-color) calc(var(--sui-link-progress, 0) * 100%), currentColor 0);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    -webkit-box-decoration-break: slice;
+    box-decoration-break: slice;
+    /* Découpées avec le texte, les décorations prendraient la couleur du dégradé */
+    text-decoration-line: none;
+  }
+  /* Lecture de la couleur du site, sans sa transition */
+  a[data-sui-link][data-sui-link="probe"] {
+    transition: none;
+  }
+  a[data-sui-link][data-sui-link="revealing"]:dir(rtl) {
+    background-image: linear-gradient(to left, var(--sui-link-color) calc(var(--sui-link-progress, 0) * 100%), currentColor 0);
+  }
+  /* Fin du passage : les décorations du site apparaissent en fondu */
+  a[data-sui-link][data-sui-link="settling"] {
+    transition:
+      text-decoration-color 200ms ease,
+      border-bottom-color 200ms ease;
+  }
+  /* Sans mouvement (mouvement réduit, onde trop longue, pas de shader) : la couleur aussi, en fondu */
+  a[data-sui-link][data-sui-link="fading"] {
+    transition:
+      color 200ms ease,
+      text-decoration-color 200ms ease,
+      border-bottom-color 200ms ease;
   }
 }
 

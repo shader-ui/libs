@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { getEngine, Engine, resetEnvironment, setEngine } from "@shader-ui/core";
 import { createRef } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { Button, Form, Input, Light, ShaderProvider, useEnvironment, type ShaderElement } from "../src/index.js";
+import { Button, Form, Input, Light, RevealLinks, ShaderProvider, useEnvironment, type ShaderElement } from "../src/index.js";
 
 beforeEach(() => {
   // Rendu CSS (jsdom n'a pas WebGL), horloge réelle
@@ -121,5 +121,37 @@ describe("environnement", () => {
     );
     expect(getByRole("status").textContent).toMatch(/^desktop\//);
     unmount();
+  });
+});
+
+describe("Liens qui se dessinent", () => {
+  beforeEach(() => {
+    vi.stubGlobal("IntersectionObserver", class { observe() {} unobserve() {} disconnect() {} });
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("<RevealLinks> s'attache à son enfant ; le démontage rend aux liens le style du site", () => {
+    const { container, unmount } = render(
+      <RevealLinks>
+        <article dangerouslySetInnerHTML={{ __html: `Lire <a href="/doc">la doc</a>.` }} />
+      </RevealLinks>,
+    );
+    const link = container.querySelector("a")!;
+    expect(link.dataset.suiLink).toBe("pending");
+    unmount();
+    expect(link.hasAttribute("data-sui-link")).toBe(false);
+  });
+
+  it("<Light reveal> révèle le lien au lieu de lui ajouter une bordure lumineuse", () => {
+    const ref = createRef<HTMLElement>();
+    const { getByRole } = render(
+      <Light reveal ref={ref as never}>
+        <a href="/renvoyer">Renvoyer le code</a>
+      </Light>,
+    );
+    const link = getByRole("link");
+    expect(ref.current).toBe(link);
+    expect(link.dataset.suiLink).toBe("pending");
+    expect(link.hasAttribute("data-sui")).toBe(false);
   });
 });

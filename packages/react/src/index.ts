@@ -10,6 +10,8 @@ export type { ChoiceProps } from "./Choice.js";
 export type { FormProps } from "./Form.js";
 export { Light } from "./Light.js";
 export type { LightComponentProps } from "./Light.js";
+export { RevealLinks } from "./RevealLinks.js";
+export type { RevealLinksProps } from "./RevealLinks.js";
 export { ShaderProvider, useEnvironment, useShaderStats } from "./ShaderProvider.js";
 export type { ShaderProviderProps } from "./ShaderProvider.js";
 export { useLight } from "./use-light.js";
@@ -37,6 +39,9 @@ export {
   getVisibility,
   canBeSeen,
   canBeSeenAll,
+  revealLinks,
+  revealStateOf,
+  autoInit,
 } from "@shader-ui/core";
 export type {
   ColorToken,
@@ -58,4 +63,7 @@ export type {
   TriggerOptions,
   Visibility,
   VisibilityState,
+  RevealLinksOptions,
+  RevealState,
+  RevealInitial,
 } from "@shader-ui/core";

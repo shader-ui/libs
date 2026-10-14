@@ -10,6 +10,7 @@ import {
   type TriggerOptions,
 } from "@shader-ui/core";
 import { useCallback, useEffect, useRef, useState, type Ref, type SyntheticEvent } from "react";
+import { setRef } from "./child-ref.js";
 
 /** L'élément natif, avec `trigger()` en plus : `ref` reste compatible react-hook-form. */
 export type ShaderElement<T extends HTMLElement> = T & {
@@ -22,11 +23,6 @@ export type EffectMap = { [event: `on${string}`]: string | EffectDefinition | un
 export interface LightProps {
   effects?: EffectMap;
   onEffectEnd?: (event: EffectEndDetail) => void;
-}
-
-function setRef<T>(ref: Ref<T> | undefined, value: T | null): void {
-  if (typeof ref === "function") ref(value);
-  else if (ref) (ref as { current: T | null }).current = value;
 }
 
 /** Branche la lumière sur un élément. Renvoie la ref à poser et les gestionnaires d'effets. */

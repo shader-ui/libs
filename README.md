@@ -26,7 +26,7 @@ Shader UI is a library, not a framework. You describe the state (`status="error"
 | Package | Content |
 |---|---|
 | `@shader-ui/core` | TypeScript core, WebGL2 engine, CSS fallback. Works without any framework |
-| `@shader-ui/react` | `Input`, `Button`, `Form`, `Light`, `ShaderProvider`, `useVisibility` (re-exports the core) |
+| `@shader-ui/react` | `Input`, `Button`, `Form`, `Light`, `RevealLinks`, `ShaderProvider`, `useVisibility` (re-exports the core) |
 
 The normative specification lives in [`docs/spec/`](https://github.com/shader-ui/libs/blob/main/docs/spec/README.md) and prevails over the code.
 
@@ -76,6 +76,32 @@ ref.current?.trigger("pulse", { color: "success" });
 - Without React: `light(element, { status })` from `@shader-ui/core`.
 - Server check (name already taken, promo code): set `aria-busy` while waiting and keep `aria-invalid` until the new answer, otherwise the field turns green before the server has confirmed. Start the check after the same typing pause as the library (`TYPING_PAUSE`, 1 s) or on blur.
 - Visibility: an effect never plays on an element that cannot be seen (off screen, covered by a modal, under the virtual keyboard). The module is also available on its own: `const { state, seen } = useVisibility(ref)` in React, or `observeVisibility(element, listener)` and `canBeSeen(element)`.
+
+#### Links that draw themselves
+
+In a text, links first look like the surrounding text. When the reader reaches them, a pulse of light runs through them in reading order, and each link takes on the site's own style in its trail. Once per link, then the page is still again.
+
+```tsx
+<RevealLinks>
+  <article className="prose">{children}</article>
+</RevealLinks>
+
+<Light reveal initial="link"><a href="/resend">Resend the code</a></Light>
+```
+
+Without React: `revealLinks(container, { ignore, initial })`, or HTML attributes activated by `autoInit()`. No bundler needed, the core loads as is from a CDN:
+
+```html
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shader-ui/core@<version>/dist/styles.css">
+<script type="module">
+  import { autoInit } from "https://cdn.jsdelivr.net/npm/@shader-ui/core@<version>/dist/index.js";
+  autoInit();
+</script>
+
+<article data-shader-ui="reveal-links">…</article>
+```
+
+The library only sets `data-sui-link` and two computed variables; the rendering lives in `styles.css`. A site rule that wins anyway (an id selector, `!important`) keeps its link style: the link stays visible as a link, without the reveal. Target `[data-sui-link]` to fix it. Pulse color: `--sui-link-light`. Use it on the body of a text, not on navigation, menus or footers.
 
 ## Guarantees
 

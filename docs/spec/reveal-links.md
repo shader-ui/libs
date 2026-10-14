@@ -1,6 +1,6 @@
 # Liens qui se dessinent
 
-> Spécification Shader UI · effet `reveal-links` · version 0.1 · **validée**
+> Spécification Shader UI · effet `reveal-links` · version 0.2 · **validée**
 > Dépend de : [Visibilité](visibility.md), [Environnement](environment.md)
 
 Dans un texte (article, documentation, page produit), les liens ont d'abord l'apparence du texte qui les entoure. Une pulsation de lumière les parcourt dans le sens de lecture, et chaque lien prend son style dans la traînée : il devient un lien sous les yeux du lecteur, qui identifie d'un coup d'œil ce qui est cliquable.
@@ -95,6 +95,7 @@ Un lien `revealed` ne revient jamais à `pending`.
 - Une onde compte comme **un seul effet** dans la limite de 3 départs par seconde.
 - La lumière (la pulsation et son halo) est dessinée par le shader, dans le canvas partagé.
 - Le texte est dans le DOM : il reste net et suit la police.
+- La révélation du style (§6.4) suit la pulsation **à la même frame** : c'est le moteur qui donne l'avancée de chaque passage, sans seconde boucle d'animation.
 
 ### 6.4 Révélation du style
 
@@ -107,8 +108,14 @@ Le dev PEUT choisir l'apparence avant le passage avec l'option `initial` :
 | `"text"` (défaut) | apparence du texte qui l'entoure | le style du lien se révèle dans la traînée |
 | `"link"` | style du site, déjà visible | la lumière passe, rien n'est révélé |
 
-- **`pending`** (avec `initial: "text"`) : la couleur du lien DOIT être celle de son parent, et ses décorations (`text-decoration`) DOIVENT être retirées.
+**Où vivent les styles.** Comme pour le reste de la lib, le JS pose l'état du lien dans un attribut (`data-sui-link` : `pending`, `revealing`, puis le fondu de fin), et en inline seulement des valeurs calculées (variables `--sui-link-*` : avancée de la pulsation, couleur du site). Tout le rendu est dans `styles.css`, avec une vraie spécificité, car il porte le sens. Aucun style visuel n'est posé en inline.
+
+Un site dont le style de lien l'emporte (sélecteur par id, `!important`) garde son style : le lien reste visible comme lien, sans révélation. Cet échec est sûr et DOIT être documenté ; le dev le corrige en ciblant `[data-sui-link]`. Sans `styles.css`, de même, rien n'est neutralisé.
+
+- **`pending`** (avec `initial: "text"`) : la couleur du lien DOIT être celle de son parent, et ses décorations DOIVENT être rendues invisibles sans changer la mise en page : `text-decoration`, et `border-bottom` pour un site qui souligne ainsi (couleur transparente, épaisseur conservée).
 - **`revealing`** : la couleur du site est révélée dans la traînée de la pulsation, la partie pas encore parcourue gardant la couleur du parent. Moyen proposé : un dégradé net entre les deux couleurs, appliqué au texte (`background-clip: text`), suivi d'une ligne à l'autre avec `box-decoration-break: slice`, et dont la position est pilotée par une variable CSS mise à jour à chaque frame **pendant l'onde seulement**.
+  - La couleur du site DOIT être lue **sans transition** : un site qui anime `color` (`transition: color`) donnerait sinon sa couleur de départ, celle du parent.
+  - Les décorations DOIVENT être retirées (`text-decoration-line: none`) pendant le passage : découpées avec le texte par `background-clip: text`, elles prendraient la couleur du dégradé (constaté dans Chrome). Cela ne change pas la mise en page.
 - **Fin du passage** : les décorations du site (soulignement, s'il y en a) apparaissent en fondu, en 200 ms.
 - **`revealed`** : la lib retire tous les styles qu'elle a ajoutés. Le lien est exactement tel que le site l'a stylé.
 
@@ -121,9 +128,12 @@ Un site qui donne à ses liens un fond coloré (surlignage) : ce fond est rempla
 | Situation | Comportement |
 |---|---|
 | Le lien reçoit le focus (clavier) en étant `pending` | passe `revealed` aussitôt, sans pulsation |
-| `prefers-reduced-motion` | les liens « vus » passent `revealed` par un fondu, sans déplacement |
+| `prefers-reduced-motion` | les liens « vus » passent `revealed` par un fondu de la couleur (200 ms), sans déplacement ni lumière |
 | Interrupteur global coupé | rien n'est neutralisé : les liens gardent le style du site |
-| Pas de WebGL2 (fallback CSS) | la couleur se révèle seule, sans pulsation lumineuse |
+| Interrupteur coupé alors que des liens sont `pending` | ils passent `revealed` aussitôt, sans fondu |
+| Contraste élevé (`forced-colors`) | rien n'est neutralisé : les couleurs système suffisent |
+| Pas de WebGL2 (fallback CSS) | la couleur se révèle seule, par un fondu (200 ms), sans pulsation lumineuse |
+| Pas d'`IntersectionObserver` | rien n'est neutralisé : sans lui, un lien ne serait jamais « vu » et resterait du texte |
 | Pas de JavaScript | style du site, rien d'autre |
 | Rendu serveur (SSR) | aucun style ajouté dans le HTML : la lib n'agit qu'après l'hydratation |
 
@@ -142,12 +152,14 @@ Un site qui donne à ses liens un fond coloré (surlignage) : ce fond est rempla
 
 Activé par `autoInit()` du cœur, qui cherche ces attributs dans la page et surveille ceux ajoutés plus tard.
 
+Sans bundler, le cœur (ESM, sans dépendance) DOIT pouvoir se charger tel quel depuis un CDN (exemple dans le README).
+
 **JavaScript** :
 
 ```ts
 const stop = revealLinks(container, {
-  ignore?: string;            // sélecteur CSS des liens à ignorer
-  initial?: "text" | "link";  // apparence avant le passage (§6.4), "text" par défaut
+  ignore: ".no-reveal", // facultatif : sélecteur CSS des liens à ignorer
+  initial: "text",      // facultatif : apparence avant le passage (§6.4), "text" (défaut) ou "link"
 });
 ```
 
@@ -159,13 +171,15 @@ const stop = revealLinks(container, {
 </Light>
 ```
 
+Avec `reveal`, `<Light>` révèle le lien au lieu de lui ajouter une bordure lumineuse : son enfant DOIT être un `<a>`.
+
 Un lien attaché seul ET contenu dans un conteneur attaché n'est géré qu'une fois.
 
 **React, sur un conteneur** :
 
 ```tsx
 <RevealLinks>
-  <article dangerouslySetInnerHTML={{ __html: html }} />
+  <article className="prose">{children}</article>
 </RevealLinks>
 ```
 
@@ -211,7 +225,9 @@ Les couleurs du lien et du texte ne sont pas des tokens : ce sont celles du site
 | Image-lien vue avec deux liens texte | une seule onde, dans l'ordre du document, tour de contour sur l'image |
 | Image-lien | image jamais masquée ni modifiée |
 | `data-sui-ignore` sur un parent | ignoré |
-| `prefers-reduced-motion` | fondu, sans déplacement |
+| `prefers-reduced-motion` | fondu de 200 ms, sans déplacement ni lumière |
+| Interrupteur coupé avec des liens `pending` | tous `revealed` aussitôt |
+| `forced-colors` | rien n'est neutralisé |
 | Onde de plus de 5 s | arrêtée, liens restants en fondu |
 | Lien `pending` | couleur du parent, sans décoration |
 | Lien avec `initial: "link"` | style du site avant, pendant et après le passage |
