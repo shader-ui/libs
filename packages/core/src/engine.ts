@@ -1,7 +1,7 @@
 import { resolveColor, type RGB } from "./color.js";
 import { reduceMotion, sampleEffect, MAX_LOOP_DURATION, type EffectDefinition } from "./effects.js";
 import { installConsole } from "./diagnostics.js";
-import { detail, isBrowser, warn } from "./env.js";
+import { coversViewport, detail, isBrowser, viewport, warn } from "./env.js";
 import { getEnvironment, reportFrameTime } from "./environment.js";
 import { perimeterAt } from "./geometry.js";
 import { canBeSeen } from "./visibility.js";
@@ -186,10 +186,9 @@ export class Engine {
     const canvas = document.querySelector("canvas[data-shader-ui]");
     if (!canvas) return;
     const r = canvas.getBoundingClientRect();
-    const [w, h] = [Math.round(r.width), Math.round(r.height)];
-    if (r.left !== 0 || r.top !== 0 || w !== window.innerWidth || h !== window.innerHeight) {
-      warn(`canvas does not cover the window (${w} × ${h} instead of ${window.innerWidth} × ${window.innerHeight}): a site rule constrains it, exclude canvas[data-shader-ui] from it.`, canvas);
-    }
+    if (coversViewport(r)) return;
+    const { width, height } = viewport();
+    warn(`canvas does not cover the window (${Math.round(r.width)} × ${Math.round(r.height)} instead of ${width} × ${height}): a site rule constrains it, exclude canvas[data-shader-ui] from it.`, canvas);
   }
 
   private watchInteractions(): void {

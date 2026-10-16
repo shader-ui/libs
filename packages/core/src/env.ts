@@ -11,6 +11,18 @@ export function isBrowser(): boolean {
   return typeof window !== "undefined" && typeof document !== "undefined";
 }
 
+/** Zone visible de la fenêtre, sans les barres de défilement : celle que couvre un élément `fixed` à 100 %. */
+export function viewport(): { width: number; height: number } {
+  const root = document.documentElement;
+  return { width: root.clientWidth || window.innerWidth, height: root.clientHeight || window.innerHeight };
+}
+
+/** Le canvas couvre-t-il la zone visible ? Un pixel d'écart est un arrondi (spec Diagnostic §4). */
+export function coversViewport(r: DOMRect): boolean {
+  const { width, height } = viewport();
+  return Math.abs(r.left) <= 1 && Math.abs(r.top) <= 1 && Math.abs(r.width - width) <= 1 && Math.abs(r.height - height) <= 1;
+}
+
 // ——— Messages (spec Diagnostic §2) ———
 
 let debug = false;

@@ -110,14 +110,24 @@ describe("anomalies (§4)", () => {
     expect(warn).toHaveBeenCalledWith(expect.stringContaining("covered while the user interacts"), el);
   });
 
-  it("canvas réduit par une règle du site : anomalie signalée", () => {
-    createTestEngine();
+  it("canvas réduit par une règle du site : anomalie signalée ; barre de défilement : rien", () => {
+    // Zone visible sans la barre de défilement verticale (15 px), celle que couvre le canvas fixe
+    const [width, height] = [window.innerWidth - 15, window.innerHeight];
+    vi.spyOn(document.documentElement, "clientWidth", "get").mockReturnValue(width);
+    vi.spyOn(document.documentElement, "clientHeight", "get").mockReturnValue(height);
     const canvas = document.createElement("canvas");
     canvas.dataset.shaderUi = "";
-    canvas.getBoundingClientRect = () => new DOMRect(0, 0, 380, window.innerHeight);
     document.body.appendChild(canvas);
+
+    canvas.getBoundingClientRect = () => new DOMRect(0, 0, width, height);
+    createTestEngine();
     light(element()).trigger("success");
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining(`380 × ${window.innerHeight}`), canvas);
+    expect(warn).not.toHaveBeenCalled();
+
+    canvas.getBoundingClientRect = () => new DOMRect(0, 0, 380, height);
+    createTestEngine();
+    light(element()).trigger("success");
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining(`380 × ${height} instead of ${width} × ${height}`), canvas);
   });
 });
 

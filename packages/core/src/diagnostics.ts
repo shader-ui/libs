@@ -1,5 +1,5 @@
 import { getEngine } from "./engine.js";
-import { isBrowser, isDebug, setDebugMode } from "./env.js";
+import { coversViewport, isBrowser, isDebug, setDebugMode, viewport } from "./env.js";
 import { getEnvironment } from "./environment.js";
 import { canBeSeen } from "./visibility.js";
 
@@ -59,12 +59,15 @@ function describe(element: Element): string {
   return `${element.tagName.toLowerCase()}${id}${!id && name ? `[name=${name}]` : ""}`;
 }
 
-function canvasSize(): string {
+/** Taille du canvas, et s'il est contraint par une règle du site (§4). */
+function canvasState(): { size: string; constrained: boolean } {
   const canvas = document.querySelector("canvas[data-shader-ui]");
-  if (!canvas) return "not created yet (no effect played)";
+  if (!canvas) return { size: "not created yet (no effect played)", constrained: false };
   const r = canvas.getBoundingClientRect();
-  return `${Math.round(r.width)} × ${Math.round(r.height)}`;
+  return { size: `${Math.round(r.width)} × ${Math.round(r.height)}`, constrained: !coversViewport(r) };
 }
+
+const viewportSize = () => `${viewport().width} × ${viewport().height}`;
 
 /** Analyse de la page, une fois, à chaque `shaderUI.debug()` (§5). */
 export function analyze(): void {
@@ -87,11 +90,9 @@ export function analyze(): void {
   if (light.length) {
     console.warn(`[shader-ui] light background behind ${light.length} element(s): Shader UI is designed for dark, effects will be hard to see.`, light);
   }
-  const window_ = `${window.innerWidth} × ${window.innerHeight}`;
-  const canvas = canvasSize();
-  const constrained = /^\d/.test(canvas) && canvas !== window_;
+  const { size, constrained } = canvasState();
   (constrained ? console.warn : console.info)(
-    `[shader-ui] canvas: ${canvas}, window: ${window_}${constrained ? " — a site rule constrains it, exclude canvas[data-shader-ui] from it." : "."}`,
+    `[shader-ui] canvas: ${size}, window: ${viewportSize()}${constrained ? " — a site rule constrains it, exclude canvas[data-shader-ui] from it." : "."}`,
   );
 }
 
@@ -125,8 +126,8 @@ export function status(): void {
     gpu: env?.render.gpu,
     "reduced motion": env?.preferences.reducedMotion,
     "forced colors": env?.preferences.forcedColors,
-    canvas: canvasSize(),
-    window: `${window.innerWidth} × ${window.innerHeight}`,
+    canvas: canvasState().size,
+    window: viewportSize(),
   });
 }
 
