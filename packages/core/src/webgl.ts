@@ -160,11 +160,21 @@ export function createWebGLBackend(): Backend | undefined {
   const canvas = document.createElement("canvas");
   canvas.setAttribute("aria-hidden", "true");
   canvas.dataset.shaderUi = "";
+  // Placement, pas style visuel : le canvas couvre la fenêtre malgré les règles du site
+  // qui visent `body > *` ou `canvas` (max-width, margin, transform…). Seul un !important l'emporte.
   Object.assign(canvas.style, {
     position: "fixed",
     inset: "0",
     width: "100%",
     height: "100%",
+    minWidth: "0",
+    minHeight: "0",
+    maxWidth: "none",
+    maxHeight: "none",
+    margin: "0",
+    padding: "0",
+    border: "0",
+    transform: "none",
     pointerEvents: "none",
     zIndex: "2147483647",
     visibility: "hidden",

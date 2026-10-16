@@ -21,8 +21,8 @@ export function autoInit(): () => void {
     if (node.matches(SELECTOR)) found.unshift(node);
     for (const el of found) {
       if (stops.has(el)) continue;
-      const initial = (el as HTMLElement).dataset.suiInitial as RevealInitial | undefined;
-      stops.set(el, revealLinks(el, { initial }));
+      const { suiInitial, suiSpeed } = (el as HTMLElement).dataset;
+      stops.set(el, revealLinks(el, { initial: suiInitial as RevealInitial | undefined, speed: suiSpeed ? Number(suiSpeed) : undefined }));
     }
   };
   const release = (el: Element) => {

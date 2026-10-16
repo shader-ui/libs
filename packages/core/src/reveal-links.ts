@@ -8,7 +8,8 @@ import { canBeSeen, observeVisibility } from "./visibility.js";
 /**
  * Liens révélés : voir `docs/spec/reveal-links.md` (fait foi).
  * L'état du lien est posé en `data-sui-link`, son rendu est dans `styles.css` ; seules les valeurs
- * calculées sont en inline (`--sui-link-color`, `--sui-link-progress`).
+ * calculées sont en inline (`--sui-link-*`). Le tracé par graphème passe par une plage de la
+ * Custom Highlight API (`::highlight(sui-link)`) : le DOM du lien n'est jamais modifié.
  */
 
 export type RevealState = "pending" | "revealing" | "revealed";
@@ -19,6 +20,8 @@ export interface RevealLinksOptions {
   ignore?: string;
   /** Apparence avant le passage (§6.4) : `"text"` par défaut. */
   initial?: RevealInitial;
+  /** Vitesse de la pulsation en px/s (§6.2) : 600 par défaut, bornée entre 100 et 2 000. */
+  speed?: number;
 }
 
 /** Les liens mis en file à moins de 100 ms d'écart forment une même onde (§5.3). */
@@ -29,18 +32,30 @@ export const WAVE_MAX = 5000;
 export const IMAGE_LINK_DURATION = UNDERLINE_MAX;
 /** Fondu des décorations en fin de passage, et fondu sans mouvement (§6.4, §7). */
 export const LINK_FADE = 200;
+/** Vitesse de la pulsation (§6.2) : par défaut, et bornes de l'option `speed`. */
+export const LINK_SPEED = UNDERLINE_SPEED;
+export const LINK_SPEED_MIN = 100;
+export const LINK_SPEED_MAX = 2000;
+/** Durée max d'un lien (§6.2) : un lien très long ne monopolise pas l'onde. */
+export const LINK_MAX = 1500;
+
+/** Nom de la plage dans `CSS.highlights`, stylée par `::highlight(sui-link)` dans styles.css. */
+const HIGHLIGHT = "sui-link";
 
 /**
  * Valeurs de `data-sui-link` : `probe` le temps de lire la couleur du site (sans transition),
- * `settling` fond les décorations, `fading` aussi la couleur.
+ * `tracing` garde l'apparence du texte pendant que la plage révèle le style par graphème,
+ * `revealing` (repli) révèle la couleur par un dégradé, `settling` fond les décorations, `fading` aussi la couleur.
  */
-type Phase = "pending" | "probe" | "revealing" | "settling" | "fading";
+type Phase = "pending" | "probe" | "tracing" | "revealing" | "settling" | "fading";
 
 interface LinkRecord {
   link: HTMLAnchorElement;
   /** Contour éclairé d'une image-lien (§3 bis). */
   image?: Element;
   initial: RevealInitial;
+  /** Vitesse de son attachement, en px/s (§6.2). */
+  speed: number;
   state: RevealState;
   /** Attachements (conteneurs, liens seuls) : le lien n'est géré qu'une fois (§8). */
   owners: Set<object>;
@@ -60,6 +75,8 @@ let gatherTimer: ReturnType<typeof setTimeout> | undefined;
 let wave: { id: string; links: LinkRecord[]; start: number } | undefined;
 let waves = 0;
 let listened: { engine: Engine; stop: () => void } | undefined;
+/** Le lien en cours de tracé : une seule plage à la fois, l'onde passe les liens un par un. */
+let tracing: LinkRecord | undefined;
 
 /** Les liens peuvent être neutralisés : sinon, ils gardent le style du site (§7). */
 function canNeutralize(): boolean {
@@ -141,11 +158,72 @@ function lineRects(link: HTMLAnchorElement): DOMRect[] {
   return rects.length ? rects : [link.getBoundingClientRect()];
 }
 
-/** Vitesse constante, durée bornée entre 250 et 700 ms (§6.2). */
+/** Vitesse constante, durée bornée entre 250 et 1 500 ms (§6.2). */
 function durationOf(record: LinkRecord): number {
   if (record.image) return IMAGE_LINK_DURATION;
   const width = lineRects(record.link).reduce((sum, r) => sum + r.width, 0);
-  return Math.min(Math.max((width / UNDERLINE_SPEED) * 1000, UNDERLINE_MIN), UNDERLINE_MAX);
+  return Math.min(Math.max((width / record.speed) * 1000, UNDERLINE_MIN), LINK_MAX);
+}
+
+/** Option `speed` : 600 px/s par défaut, ramenée entre 100 et 2 000 (§6.2). */
+function speedOf(value: unknown): number {
+  const speed = Number(value);
+  return Number.isFinite(speed) && speed > 0 ? Math.min(Math.max(speed, LINK_SPEED_MIN), LINK_SPEED_MAX) : LINK_SPEED;
+}
+
+/** Custom Highlight API et découpage en graphèmes : sans eux, repli par dégradé (§6.4). */
+const canTrace = () =>
+  typeof Highlight === "function" && typeof CSS !== "undefined" && "highlights" in CSS && typeof Intl.Segmenter === "function";
+
+/** Le soulignement du site, lu sans nos styles. Un `border-bottom` ne se dessine pas en `::highlight` : repli. */
+function siteDecoration(link: HTMLElement): Record<string, string> | undefined {
+  const style = getComputedStyle(link);
+  if (parseFloat(style.borderBottomWidth) > 0 && style.borderBottomStyle !== "none") return undefined;
+  return {
+    "--sui-link-color": style.color,
+    "--sui-link-line": style.textDecorationLine,
+    "--sui-link-style": style.textDecorationStyle,
+    "--sui-link-deco": style.textDecorationColor,
+    "--sui-link-thickness": style.textDecorationThickness,
+  };
+}
+
+/**
+ * Fin de chaque graphème du lien et sa distance sur le chemin de la pulsation (§6.1, §6.4).
+ * Calculées une fois au départ : relatives aux lignes du lien, elles ne changent pas au défilement.
+ */
+function graphemeStops(link: HTMLAnchorElement, lines: DOMRect[], rtl: boolean): Array<{ node: Text; end: number; at: number }> {
+  const offsets: number[] = [];
+  lines.reduce((sum, r) => (offsets.push(sum), sum + r.width), 0);
+  const stops: Array<{ node: Text; end: number; at: number }> = [];
+  const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+  const range = document.createRange();
+  const walker = document.createTreeWalker(link, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode() as Text | null; node; node = walker.nextNode() as Text | null) {
+    for (const { segment, index } of segmenter.segment(node.data)) {
+      range.setStart(node, index);
+      range.setEnd(node, index + segment.length);
+      const box = range.getClientRects()[0];
+      if (!box) continue;
+      const mid = box.top + box.height / 2;
+      let line = lines.findIndex((r) => mid >= r.top && mid <= r.bottom);
+      if (line < 0) line = lines.length - 1;
+      const r = lines[line]!;
+      stops.push({ node, end: index + segment.length, at: offsets[line]! + (rtl ? r.right - box.left : box.right - r.left) });
+    }
+  }
+  return stops;
+}
+
+/** Une ligne remontée à la hauteur du soulignement : le shader dessine 2 px sous la boîte (§6.1). */
+function underlineBox(r: DOMRect, fontSize: number): DOMRect {
+  return new DOMRect(r.x, r.y, r.width, Math.max(r.height - fontSize * 0.28 - 2, 1));
+}
+
+function clearTrace(record: LinkRecord): void {
+  if (tracing !== record) return;
+  tracing = undefined;
+  CSS.highlights.delete(HIGHLIGHT);
 }
 
 /** Sens de lecture de la page (principe 6). */
@@ -163,8 +241,10 @@ function play(record: LinkRecord, waveId: string): void {
   record.state = "revealing";
   const done = (reason: EndReason) => {
     if (records.get(link) === record && record.state === "revealing") {
-      // Interrupteur coupé : style du site aussitôt ; effet sauté ou interrompu : fondu
-      finish(record, !engine.isEnabled() ? undefined : reason === "complete" ? "settling" : "fading");
+      // Interrupteur coupé : style du site aussitôt ; tracé complet : le vrai soulignement prend le relais,
+      // sans fondu ; repli complet : décorations en fondu ; effet sauté ou interrompu : fondu
+      const traced = tracing === record;
+      finish(record, !engine.isEnabled() ? undefined : reason !== "complete" ? "fading" : traced ? undefined : "settling");
     }
     next();
   };
@@ -181,13 +261,36 @@ function play(record: LinkRecord, waveId: string): void {
   const widths = lines.map((r) => r.width);
   const total = widths.reduce((sum, w) => sum + w, 0) || 1;
   const duration = durationOf(record);
+  const fontSize = parseFloat(getComputedStyle(link).fontSize) || 16;
+  // Progression du style dans la traînée : plage par graphème, ou dégradé en repli
+  let reveal: ((progress: number) => void) | undefined;
   if (record.initial === "text") {
-    // La couleur du site, lue sans nos styles : elle suit un changement de thème entre-temps.
+    // Le style du site, lu sans nos styles : il suit un changement de thème entre-temps.
     // Sans transition : celle du site (`transition: color`) donnerait la couleur de départ
     link.dataset.suiLink = "probe" satisfies Phase;
+    const site = canTrace() ? siteDecoration(link) : undefined;
     link.style.setProperty("--sui-link-color", getComputedStyle(link).color);
-    setProgress(link, 0);
-    link.dataset.suiLink = "revealing" satisfies Phase;
+    if (site) {
+      for (const [name, value] of Object.entries(site)) link.style.setProperty(name, value);
+      link.dataset.suiLink = "tracing" satisfies Phase;
+      const stops = graphemeStops(link, lines, rtl);
+      const range = document.createRange();
+      range.setStart(link, 0);
+      range.collapse(true);
+      CSS.highlights.set(HIGHLIGHT, new Highlight(range));
+      tracing = record;
+      let passed = 0;
+      reveal = (progress) => {
+        const at = progress * total;
+        while (passed < stops.length && stops[passed]!.at <= at + 0.5) passed++;
+        const last = stops[passed - 1];
+        if (last) range.setEnd(last.node, last.end);
+      };
+    } else {
+      setProgress(link, 0);
+      link.dataset.suiLink = "revealing" satisfies Phase;
+      reveal = (progress) => setProgress(link, progress);
+    }
   }
   const underline = { ...getEffect("underline")!, color: lightColor(link) };
 
@@ -202,9 +305,9 @@ function play(record: LinkRecord, waveId: string): void {
     engine.play(link, { ...underline, duration: (duration * widths[line]!) / total }, {
       wave: waveId,
       origin: rtl ? 1 : 0,
-      // Relue à chaque frame : la page peut défiler (§6.1)
-      box: () => lineRects(link)[line] ?? lines[line]!,
-      onFrame: record.initial === "text" ? (p) => setProgress(link, (start + p * widths[line]!) / total) : undefined,
+      // Relue à chaque frame : la page peut défiler (§6.1). À la hauteur du soulignement
+      box: () => underlineBox(lineRects(link)[line] ?? lines[line]!, fontSize),
+      onFrame: reveal ? (p) => reveal((start + p * widths[line]!) / total) : undefined,
       onEnd: step,
     });
   };
@@ -220,9 +323,11 @@ function unmark(record: LinkRecord): void {
   if (record.timer !== undefined) clearTimeout(record.timer);
   record.timer = undefined;
   const { link } = record;
+  clearTrace(record);
   delete link.dataset.suiLink;
-  link.style.removeProperty("--sui-link-color");
-  link.style.removeProperty("--sui-link-progress");
+  for (const name of ["--sui-link-color", "--sui-link-progress", "--sui-link-line", "--sui-link-style", "--sui-link-deco", "--sui-link-thickness"]) {
+    link.style.removeProperty(name);
+  }
   if (!link.getAttribute("style")) link.removeAttribute("style");
 }
 
@@ -260,7 +365,8 @@ function attach(link: HTMLAnchorElement, owner: object, options: RevealLinksOpti
   if (!image && (!link.textContent?.trim() || getComputedStyle(link).display !== "inline")) return;
 
   const initial: RevealInitial = (link.dataset.suiInitial ?? options.initial) === "link" ? "link" : "text";
-  const record: LinkRecord = { link, image, initial, state: "pending", owners: new Set([owner]), queued: false, cleanup: () => {} };
+  const speed = speedOf(options.speed);
+  const record: LinkRecord = { link, image, initial, speed, state: "pending", owners: new Set([owner]), queued: false, cleanup: () => {} };
   records.set(link, record);
   if (!image && initial === "text") link.dataset.suiLink = "pending" satisfies Phase;
 
@@ -337,6 +443,8 @@ export function resetRevealLinks(): void {
     unmark(record);
   }
   records.clear();
+  if (tracing && canTrace()) CSS.highlights.delete(HIGHLIGHT);
+  tracing = undefined;
   revealedOnce = new WeakSet();
   if (gatherTimer !== undefined) clearTimeout(gatherTimer);
   gatherTimer = undefined;

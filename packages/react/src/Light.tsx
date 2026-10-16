@@ -13,16 +13,18 @@ export interface LightComponentProps extends LightProps {
   reveal?: boolean;
   /** Avec `reveal` : apparence avant le passage, `"text"` par défaut. */
   initial?: RevealInitial;
+  /** Avec `reveal` : vitesse de la pulsation en px/s, 600 par défaut. */
+  speed?: number;
 }
 
 /** Ajoute la bordure lumineuse à n'importe quel élément existant, ou révèle un lien (`reveal`). */
 export const Light = forwardRef<ShaderElement<HTMLElement>, LightComponentProps>(function Light(
-  { children, effects, onEffectEnd, reveal, initial },
+  { children, effects, onEffectEnd, reveal, initial, speed },
   forwardedRef,
 ) {
   if (reveal) {
     return (
-      <RevealLinks ref={forwardedRef as Ref<HTMLElement>} initial={initial}>
+      <RevealLinks ref={forwardedRef as Ref<HTMLElement>} initial={initial} speed={speed}>
         {children}
       </RevealLinks>
     );

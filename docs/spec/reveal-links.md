@@ -1,9 +1,9 @@
 # Liens révélés
 
-> Spécification Shader UI · effet `reveal-links` · version 0.2 · **validée**
+> Spécification Shader UI · effet `reveal-links` · version 0.3 · **validée**
 > Dépend de : [Visibilité](visibility.md), [Environnement](environment.md)
 
-Dans un texte (article, documentation, page produit), les liens ont d'abord l'apparence du texte qui les entoure. Une pulsation de lumière les parcourt dans le sens de lecture, et chaque lien prend son style dans la traînée : il devient un lien sous les yeux du lecteur, qui identifie d'un coup d'œil ce qui est cliquable.
+Dans un texte (article, documentation, page produit), les liens ont d'abord l'apparence du texte qui les entoure. Une pulsation de lumière les parcourt dans le sens de lecture, et chaque lien prend son style dans la traînée : la lumière trace son soulignement, et il devient un lien sous les yeux du lecteur, qui identifie d'un coup d'œil ce qui est cliquable.
 
 Les mots **DOIT**, **NE DOIT PAS**, **DEVRAIT** et **PEUT** ont le sens de la RFC 2119.
 
@@ -47,7 +47,7 @@ Un lien qui ne contient qu'une ou plusieurs images, sans texte (`<a href><img al
 - Il n'y a pas de style à révéler : l'image n'est **jamais masquée ni modifiée**. Seule la lumière passe.
 - La lumière fait **un tour du contour** de l'image (effet `sweep`), en partant du début de la ligne de lecture de la page : milieu du bord gauche en `ltr`, du bord droit en `rtl`.
 - Le contour est celui de l'image (`<img>`, `<picture>`, `<svg>`), pas celui du lien, dont la boîte en ligne ne correspond pas à l'image.
-- Durée : celle d'un lien long, **700 ms**.
+- Durée : **700 ms**, quelle que soit la vitesse.
 - États : `pending` puis `revealed`, sans état intermédiaire visible dans le DOM.
 
 ---
@@ -80,13 +80,13 @@ Un lien `revealed` ne revient jamais à `pending`.
 ### 6.1 Géométrie
 
 - Un lien sur plusieurs lignes a plusieurs boîtes (`getClientRects()`, une par ligne). L'onde les parcourt dans l'ordre des lignes, et chaque ligne dans le sens de lecture.
-- La pulsation court en bas de chaque boîte de ligne, sous le texte.
+- La pulsation court à la hauteur du soulignement : elle trace le trait (§6.4).
 - Les positions DOIVENT être relues à chaque frame pendant l'onde : la page peut défiler.
 
 ### 6.2 Temps
 
-- La pulsation avance à vitesse constante : **1 200 px/s** (constante nommée).
-- La durée par lien est bornée entre 250 et 700 ms : un lien très court reste perceptible, un lien très long ne monopolise pas l'onde.
+- La pulsation avance à vitesse constante : **600 px/s** par défaut, option `speed` (§8), bornée entre 100 et 2 000 px/s.
+- La durée par lien est bornée entre 250 et 1 500 ms : un lien très court reste perceptible, un lien très long ne monopolise pas l'onde.
 - Entre deux liens, la pulsation s'éteint au bout du premier et s'allume au début du suivant, sans pause.
 - Une onde dure au plus **5 s** (WCAG 2.2.2). Au-delà, les liens restants passent `revealed` par un simple fondu, sans pulsation.
 
@@ -113,10 +113,11 @@ Le dev PEUT choisir l'apparence avant le passage avec l'option `initial` :
 Un site dont le style de lien l'emporte (sélecteur par id, `!important`) garde son style : le lien reste visible comme lien, sans révélation. Cet échec est sûr et DOIT être documenté ; le dev le corrige en ciblant `[data-sui-link]`. Sans `styles.css`, de même, rien n'est neutralisé.
 
 - **`pending`** (avec `initial: "text"`) : la couleur du lien DOIT être celle de son parent, et ses décorations DOIVENT être rendues invisibles sans changer la mise en page : `text-decoration`, et `border-bottom` pour un site qui souligne ainsi (couleur transparente, épaisseur conservée).
-- **`revealing`** : la couleur du site est révélée dans la traînée de la pulsation, la partie pas encore parcourue gardant la couleur du parent. Moyen proposé : un dégradé net entre les deux couleurs, appliqué au texte (`background-clip: text`), suivi d'une ligne à l'autre avec `box-decoration-break: slice`, et dont la position est pilotée par une variable CSS mise à jour à chaque frame **pendant l'onde seulement**.
+- **`revealing`** : la couleur et le soulignement du site sont révélés **graphème par graphème** (`Intl.Segmenter`) dans la traînée. Moyen : une plage de la **Custom Highlight API**, du début du lien au dernier graphème dépassé, stylée par `::highlight(sui-link)` avec les valeurs du site (`--sui-link-*`). Le DOM du lien NE DOIT PAS être modifié. Le trait étant un vrai `text-decoration`, la fin se fait sans fondu.
+- **Repli** (pas de Custom Highlight API, ou soulignement par `border-bottom`) : la couleur est révélée dans la traînée, les décorations en fondu à la fin. Moyen proposé : un dégradé net entre les deux couleurs, appliqué au texte (`background-clip: text`), suivi d'une ligne à l'autre avec `box-decoration-break: slice`, et dont la position est pilotée par une variable CSS mise à jour à chaque frame **pendant l'onde seulement**.
   - La couleur du site DOIT être lue **sans transition** : un site qui anime `color` (`transition: color`) donnerait sinon sa couleur de départ, celle du parent.
   - Les décorations DOIVENT être retirées (`text-decoration-line: none`) pendant le passage : découpées avec le texte par `background-clip: text`, elles prendraient la couleur du dégradé (constaté dans Chrome). Cela ne change pas la mise en page.
-- **Fin du passage** : les décorations du site (soulignement, s'il y en a) apparaissent en fondu, en 200 ms.
+- **Fin du passage, en repli** : les décorations du site (soulignement, s'il y en a) apparaissent en fondu, en 200 ms.
 - **`revealed`** : la lib retire tous les styles qu'elle a ajoutés. Le lien est exactement tel que le site l'a stylé.
 
 Un site qui donne à ses liens un fond coloré (surlignage) : ce fond est remplacé pendant la révélation, puis rendu à la fin.
@@ -146,9 +147,12 @@ Un site qui donne à ses liens un fond coloré (surlignage) : ce fond est rempla
 ```html
 <article data-shader-ui="reveal-links">…</article>
 <article data-shader-ui="reveal-links" data-sui-initial="link">…</article>
+<article data-shader-ui="reveal-links" data-sui-speed="800">…</article>
 ```
 
 `data-sui-initial` PEUT aussi être posé sur un lien, pour lui seul.
+
+En React, `speed` est une prop de `<RevealLinks>` et de `<Light reveal>`.
 
 Activé par `autoInit()` du cœur, qui cherche ces attributs dans la page et surveille ceux ajoutés plus tard.
 
@@ -160,6 +164,7 @@ Sans bundler, le cœur (ESM, sans dépendance) DOIT pouvoir se charger tel quel 
 const stop = revealLinks(container, {
   ignore: ".no-reveal", // facultatif : sélecteur CSS des liens à ignorer
   initial: "text",      // facultatif : apparence avant le passage (§6.4), "text" (défaut) ou "link"
+  speed: 600,           // facultatif : vitesse en px/s (§6.2)
 });
 ```
 
@@ -228,17 +233,21 @@ Les couleurs du lien et du texte ne sont pas des tokens : ce sont celles du site
 | Un lien seul et un lien d'article vus ensemble | une seule onde, dans l'ordre du document |
 | Rechargement de la page | l'onde rejoue (rien n'est mémorisé) |
 | Lien `revealed` qui sort puis revient à l'écran | rien ne se rejoue |
+| Passage d'un lien souligné | trait sur les graphèmes dépassés seulement, jamais au milieu d'un graphème ; DOM inchangé |
+| Sans Custom Highlight API, ou `border-bottom` | repli |
+| `speed: 800`, lien de 400 px | 500 ms |
 
 ---
 
 ## 11. Réglages dans le lab
 
-La vitesse (1 200 px/s) et la couleur de la pulsation sont des valeurs de départ, à régler dans le lab.
+La couleur de la pulsation est une valeur de départ, à régler dans le lab. Vitesse par défaut choisie dans le lab : 600 px/s.
 
 ---
 
 ## Historique
 
+- **0.3** : soulignement tracé par graphème (Custom Highlight API) ; option `speed`, 600 px/s par défaut au lieu de 1 200 ; durée max par lien 1 500 ms.
 - **0.2** (révision) : renommée « Liens révélés » ; conventions retirées, elles vivent sur le site (couche Conventions du référentiel) ; les règles ne changent pas.
 - **0.2** : validée avec le code de l'effet.
 - **0.1** : première version validée.

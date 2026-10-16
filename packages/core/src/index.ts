@@ -11,7 +11,7 @@ export type { FormController, FormOptions } from "./form.js";
 export { watchChoice, TRAIL_MAX } from "./choice.js";
 export type { Choice, ChoiceState } from "./choice.js";
 export { legendOf, underline } from "./underline.js";
-export { revealLinks, revealStateOf, WAVE_GATHER, WAVE_MAX, IMAGE_LINK_DURATION, LINK_FADE } from "./reveal-links.js";
+export { revealLinks, revealStateOf, WAVE_GATHER, WAVE_MAX, IMAGE_LINK_DURATION, LINK_FADE, LINK_SPEED, LINK_SPEED_MIN, LINK_SPEED_MAX, LINK_MAX } from "./reveal-links.js";
 export type { RevealLinksOptions, RevealState, RevealInitial } from "./reveal-links.js";
 export { autoInit } from "./auto-init.js";
 export { getEngine, setEngine, Engine } from "./engine.js";

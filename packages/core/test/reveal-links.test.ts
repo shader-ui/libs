@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import {
   autoInit,
   configureEnvironment,
@@ -207,6 +207,44 @@ describe("rendu (§6)", () => {
     expect(Number(style.getPropertyValue("--sui-link-progress"))).toBeGreaterThan(0);
   });
 
+  it("Custom Highlight API : trait tracé par graphème, DOM du lien inchangé, fin sans fondu", () => {
+    const highlights = new Map<string, { ranges: Range[] }>();
+    vi.stubGlobal("CSS", { highlights });
+    vi.stubGlobal("Highlight", class {
+      ranges: Range[];
+      constructor(...ranges: Range[]) {
+        this.ranges = ranges;
+      }
+    });
+    // Un graphème = 10 px depuis son premier point de code : « é » en deux points de code (e + U+0301)
+    // Absente de jsdom : installée le temps du test
+    Range.prototype.getClientRects = function (this: Range) {
+      return [new DOMRect(20 + this.startOffset * 10, 100, 10, 20)] as unknown as DOMRectList;
+    };
+    onTestFinished(() => void delete (Range.prototype as Partial<Range>).getClientRects);
+    const { links } = setup(`<a href="/a">Cafe\u0301 ok</a>`);
+    const link = sized(links[0]!, 80);
+    const html = link.innerHTML;
+    see(link);
+    vi.advanceTimersByTime(WAVE_GATHER);
+    const ends = new Set<number>();
+    for (let i = 0; i < 200 && t.pendingFrames; i++) {
+      vi.advanceTimersByTime(16);
+      t.tick(16);
+      const range = highlights.get("sui-link")?.ranges[0];
+      if (range) ends.add(range.endOffset);
+      if (t.pendingFrames) expect(link.dataset.suiLink).toBe("tracing");
+    }
+    // La plage avance graphème par graphème, sans jamais couper « é » (fin à 4) ; le DOM n'a pas bougé
+    expect(ends.has(4)).toBe(false);
+    expect(ends.has(5)).toBe(true);
+    expect(link.innerHTML).toBe(html);
+    // Le vrai soulignement prend le relais : plage retirée, aucun attribut ni fondu
+    expect(highlights.has("sui-link")).toBe(false);
+    expect(link.hasAttribute("data-sui-link")).toBe(false);
+    expect(revealStateOf(link)).toBe("revealed");
+  });
+
   it("revealed : attributs et style inline du site rendus à l'identique", () => {
     const { links } = setup(`<a href="/a" style="color: red" class="x">la doc</a>`);
     see(links[0]!);
@@ -242,8 +280,9 @@ describe("cas où l'onde n'est pas jouée (§7)", () => {
   });
 
   it("onde de plus de 5 s : arrêtée, liens restants en fondu", () => {
-    const { links } = setup(Array.from({ length: 10 }, (_, i) => `<a href="/${i}">lien long</a>`).join(" "));
-    links.forEach((link) => sized(link, 900)); // 700 ms chacun
+    // speed: 800 : un lien de 560 px dure 700 ms (§6.2)
+    const { links } = setup(Array.from({ length: 10 }, (_, i) => `<a href="/${i}">lien long</a>`).join(" "), { speed: 800 });
+    links.forEach((link) => sized(link, 560));
     see(...links);
     vi.advanceTimersByTime(WAVE_GATHER);
     while (t.pendingFrames) {

@@ -10,7 +10,7 @@ export interface RevealLinksProps extends RevealLinksOptions {
 }
 
 /** Révèle les liens de son unique enfant quand le lecteur arrive dessus (spec Liens révélés). */
-export const RevealLinks = forwardRef<HTMLElement, RevealLinksProps>(function RevealLinks({ children, ignore, initial }, forwardedRef) {
+export const RevealLinks = forwardRef<HTMLElement, RevealLinksProps>(function RevealLinks({ children, ignore, initial, speed }, forwardedRef) {
   const child = Children.only(children) as ReactElement<Record<string, unknown>>;
   const refs = useRef({ forwardedRef, childRef: childRefOf<HTMLElement>(child) });
   refs.current = { forwardedRef, childRef: childRefOf<HTMLElement>(child) };
@@ -23,7 +23,7 @@ export const RevealLinks = forwardRef<HTMLElement, RevealLinksProps>(function Re
   }, []);
 
   // Après l'hydratation seulement : rien n'est ajouté au HTML du serveur
-  useEffect(() => (element ? revealLinks(element, { ignore, initial }) : undefined), [element, ignore, initial]);
+  useEffect(() => (element ? revealLinks(element, { ignore, initial, speed }) : undefined), [element, ignore, initial, speed]);
 
   return cloneElement(child, { ref });
 });

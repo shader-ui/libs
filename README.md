@@ -79,7 +79,7 @@ ref.current?.trigger("pulse", { color: "success" });
 
 #### Links that draw themselves
 
-In a text, links first look like the surrounding text. When the reader reaches them, a pulse of light runs through them in reading order, and each link takes on the site's own style in its trail. Once per link, then the page is still again.
+In a text, links first look like the surrounding text. When the reader reaches them, a pulse of light runs through them in reading order, and each link takes on the site's own style in its trail, the light drawing its underline letter by letter. Once per link, then the page is still again.
 
 ```tsx
 <RevealLinks>
@@ -89,7 +89,7 @@ In a text, links first look like the surrounding text. When the reader reaches t
 <Light reveal initial="link"><a href="/resend">Resend the code</a></Light>
 ```
 
-Without React: `revealLinks(container, { ignore, initial })`, or HTML attributes activated by `autoInit()`. No bundler needed, the core loads as is from a CDN:
+Speed: `speed` (px/s, 600 by default), also a prop of `<RevealLinks>` and `<Light reveal>`. Without React: `revealLinks(container, { ignore, initial, speed })`, or HTML attributes activated by `autoInit()`. No bundler needed, the core loads as is from a CDN:
 
 ```html
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shader-ui/core@<version>/dist/styles.css">
