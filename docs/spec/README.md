@@ -10,9 +10,10 @@ Méthode (voir `../../CLAUDE.md`) : algo discuté, puis spec validée, puis code
 |---|---|---|---|
 | [Environnement](environment.md) | où suis-je : appareil, navigateur, rendu, performance | validée (0.2) | fait |
 | [Visibilité](visibility.md) | l'élément peut-il être vu | validée (0.2) | fait (écart de budget noté §8.3) |
-| [Liens révélés](reveal-links.md) | révéler les liens d'un texte, images-liens comprises | validée (0.2) | fait |
+| [Liens révélés](reveal-links.md) | révéler les liens d'un texte, images-liens comprises | validée (0.3) | fait |
 | [Cibles](targets.md) | sur quoi la lib s'applique, cas particuliers, hors périmètre | validée | à faire |
-| [Formulaire](form.md) | Form, Input, Button, Checkbox, Radio | validée | fait |
+| [Formulaire](form.md) | Form, Input, Button, Checkbox, Radio | validée (0.2) | fait |
+| [Diagnostic](diagnostics.md) | expliquer un effet qui ne se joue pas | validée (0.1) | fait |
 
 ## À venir
 

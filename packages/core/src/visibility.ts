@@ -559,7 +559,7 @@ export function observeVisibility(element: Element, listener: Listener): () => v
   if (!isBrowser()) return () => {};
   // Hors périmètre : un élément d'une iframe n'est ni observé ni éclairé (§6 bis)
   if (element.ownerDocument !== document) {
-    warn("élément situé dans une iframe : il n'est ni observé ni éclairé depuis la page parente.");
+    warn("element inside an iframe: it is neither observed nor lit from the parent page.", element);
     return () => {};
   }
   const subscription: Subscription = { listener };

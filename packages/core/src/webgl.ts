@@ -207,7 +207,7 @@ export function createWebGLBackend(): Backend | undefined {
     gl.linkProgram(program);
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program) ?? "link");
   } catch (e) {
-    console.warn("[shader-ui] WebGL2 indisponible, fallback CSS.", e);
+    console.warn("[shader-ui] WebGL2 unavailable, CSS fallback.", e);
     return undefined;
   }
 

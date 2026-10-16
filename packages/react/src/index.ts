@@ -49,6 +49,7 @@ export type {
   EffectEndDetail,
   EffectKind,
   EndReason,
+  SkipCause,
   Environment,
   EnvironmentOverrides,
   Light as LightHandle,

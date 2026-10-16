@@ -40,7 +40,7 @@ describe("Input", () => {
     fireEvent.paste(getByRole("textbox"));
     await act(() => Promise.resolve());
     expect(onPaste).toHaveBeenCalledOnce();
-    expect(onEffectEnd).toHaveBeenCalledWith({ name: "ripple", reason: "skipped" });
+    expect(onEffectEnd).toHaveBeenCalledWith({ name: "ripple", reason: "skipped", cause: "disabled" });
   });
 
 });

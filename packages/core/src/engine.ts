@@ -1,19 +1,23 @@
 import { resolveColor, type RGB } from "./color.js";
 import { reduceMotion, sampleEffect, MAX_LOOP_DURATION, type EffectDefinition } from "./effects.js";
-import { isBrowser, warn } from "./env.js";
+import { installConsole } from "./diagnostics.js";
+import { detail, isBrowser, warn } from "./env.js";
 import { getEnvironment, reportFrameTime } from "./environment.js";
 import { perimeterAt } from "./geometry.js";
 import { canBeSeen } from "./visibility.js";
 import { createWebGLBackend, KIND_ID, type Backend, type Instance } from "./webgl.js";
 
 export type EndReason = "complete" | "interrupted" | "skipped";
+/** Pourquoi un effet a été sauté (spec Diagnostic §3). */
+export type SkipCause = "disabled" | "forced-colors" | "not-visible" | "rate-limit" | "reduced-motion";
 
 /** Point de départ de la lumière : fraction du périmètre, ou point en coordonnées client. */
 export type Origin = number | { x: number; y: number };
 
 export interface PlayOptions {
   origin?: Origin;
-  onEnd?: (reason: EndReason) => void;
+  /** Fin de l'effet ; `cause` accompagne `"skipped"`. */
+  onEnd?: (reason: EndReason, cause?: SkipCause) => void;
   /** Effets d'une même vague (onde d'erreurs, mode init) : ils comptent pour un seul départ. */
   wave?: string;
   /** Boîte dessinée, relue à chaque frame (par défaut, celle de l'élément) : l'étendue du texte pour un trait. */
@@ -35,6 +39,8 @@ export interface Stats {
 /** WCAG 2.3.1 : au plus 3 départs d'effet par seconde sur la page. */
 const FLASH_WINDOW = 1000;
 const FLASH_LIMIT = 3;
+/** Une interaction plus récente que ce délai rend suspect un élément couvert (spec Diagnostic §4). */
+const INTERACTION_WINDOW = 1000;
 
 interface Active {
   el: Element;
@@ -77,6 +83,10 @@ export class Engine {
   private readonly now: () => number;
   private readonly requestFrame: (cb: (time: number) => void) => number;
   private readonly canBeSeen: (el: Element) => boolean;
+  /** Dernière interaction (clic, toucher, touche) : un élément couvert à ce moment-là est une anomalie. */
+  private interaction: { target: EventTarget | null; time: number } | undefined;
+  private watchingInteractions = false;
+  private canvasChecked = false;
 
   constructor(options: EngineOptions = {}) {
     this.createBackend = options.createBackend ?? createWebGLBackend;
@@ -109,16 +119,24 @@ export class Engine {
   }
 
   play(el: Element, definition: EffectDefinition, options: PlayOptions = {}): void {
-    const skip = () => queueMicrotask(() => options.onEnd?.("skipped"));
-    if (!this.enabled || !isBrowser()) return skip();
+    const skip = (cause: SkipCause) => {
+      detail(`${definition.kind} effect skipped (${cause}).`, el);
+      queueMicrotask(() => options.onEnd?.("skipped", cause));
+    };
+    if (!isBrowser()) return void queueMicrotask(() => options.onEnd?.("skipped", "disabled"));
+    this.watchInteractions();
+    if (!this.enabled) return skip("disabled");
     // Contraste élevé : les couleurs système suffisent, pas de shader (spec Formulaire §1, Environnement §2)
-    if (getEnvironment()?.preferences.forcedColors) return skip();
+    if (getEnvironment()?.preferences.forcedColors) return skip("forced-colors");
     // Une lumière que personne ne voit n'est pas jouée ; sa fin est signalée quand même
-    if (!this.canBeSeen(el)) return skip();
+    if (!this.canBeSeen(el)) {
+      if (this.isInteracting(el)) warn("element covered while the user interacts with it: check that no fixed element covers it.", el);
+      return skip("not-visible");
+    }
 
     // WCAG 2.3.3 : le mouvement est remplacé par un simple fondu
     const def = getEnvironment()?.preferences.reducedMotion ? reduceMotion(definition) : definition;
-    if (!def) return skip();
+    if (!def) return skip("reduced-motion");
 
     const now = this.now();
     while (this.starts.length && now - this.starts[0]!.time > FLASH_WINDOW) this.starts.shift();
@@ -126,8 +144,8 @@ export class Engine {
     const counted = options.wave !== undefined && this.starts.some((s) => s.wave === options.wave);
     if (!counted) {
       if (this.starts.length >= FLASH_LIMIT) {
-        warn("plus de 3 effets par seconde : effet ignoré (WCAG 2.3.1).");
-        return skip();
+        warn("more than 3 effects per second: effect skipped (WCAG 2.3.1).");
+        return skip("rate-limit");
       }
       this.starts.push({ time: now, wave: options.wave });
     }
@@ -154,9 +172,39 @@ export class Engine {
     this.active.set(el, effect);
 
     const backend = this.getBackend();
-    if (backend) this.schedule();
-    else this.playCss(effect);
+    if (backend) {
+      this.checkCanvas();
+      this.schedule();
+    } else this.playCss(effect);
     this.emit();
+  }
+
+  /** Le canvas couvre-t-il la fenêtre ? Une règle du site peut le contraindre (spec Diagnostic §4). */
+  private checkCanvas(): void {
+    if (this.canvasChecked) return;
+    this.canvasChecked = true;
+    const canvas = document.querySelector("canvas[data-shader-ui]");
+    if (!canvas) return;
+    const r = canvas.getBoundingClientRect();
+    const [w, h] = [Math.round(r.width), Math.round(r.height)];
+    if (r.left !== 0 || r.top !== 0 || w !== window.innerWidth || h !== window.innerHeight) {
+      warn(`canvas does not cover the window (${w} × ${h} instead of ${window.innerWidth} × ${window.innerHeight}): a site rule constrains it, exclude canvas[data-shader-ui] from it.`, canvas);
+    }
+  }
+
+  private watchInteractions(): void {
+    if (this.watchingInteractions) return;
+    this.watchingInteractions = true;
+    const record = (event: Event) => (this.interaction = { target: event.target, time: this.now() });
+    for (const type of ["pointerdown", "keydown"]) document.addEventListener(type, record, { capture: true, passive: true });
+  }
+
+  /** L'élément a le focus, ou vient d'être cliqué, touché ou tapé. */
+  private isInteracting(el: Element): boolean {
+    const focused = document.activeElement;
+    if (focused && focused !== document.body && (el === focused || el.contains(focused))) return true;
+    const last = this.interaction;
+    return !!last && last.target instanceof Node && el.contains(last.target) && this.now() - last.time < INTERACTION_WINDOW;
   }
 
   /** Arrête la boucle en cours sur l'élément, avec un fondu. */
@@ -289,8 +337,9 @@ export class Engine {
 
 let engine: Engine | undefined;
 
-/** Moteur partagé de la page : un seul canvas, créé au premier effet. */
+/** Moteur partagé de la page : un seul canvas, créé au premier effet. `shaderUI` arrive dans la console avec lui. */
 export function getEngine(): Engine {
+  installConsole();
   return (engine ??= new Engine());
 }
 

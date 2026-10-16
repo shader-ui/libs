@@ -1,4 +1,6 @@
-import { buttonOf } from "./button.js";
+import { buttonOf, watchButton } from "./button.js";
+import { choiceOf, watchChoice } from "./choice.js";
+import { fieldOf, watchField, TEXT_TYPES } from "./field.js";
 import { lightOf } from "./light.js";
 import { diodeOrigin } from "./diode.js";
 import { TYPING_PAUSE } from "./timing.js";
@@ -20,6 +22,8 @@ export interface FormOptions {
   ready?: boolean;
   /** Mode init (§2.2) : au premier geste, un trait blanc sous le label de chaque champ obligatoire. */
   guide?: boolean;
+  /** `"auto"` (défaut) : branche lui-même champs, cases, radios et boutons d'envoi ; `"manual"` : rien (§2.4). */
+  fields?: "auto" | "manual";
 }
 
 export interface FormController {
@@ -260,7 +264,7 @@ export function watchForm(element: HTMLFormElement, options: FormOptions = {}): 
     }
     // Un champ sans label visible est une erreur (WCAG 3.3.2) : pas de lueur, rien ne la remplace
     if (unlabelled) {
-      warn("mode init : un champ obligatoire n'a pas de label visible (WCAG 3.3.2), les lueurs ne sont pas affichées.");
+      warn("guide mode: a required field has no visible label (WCAG 3.3.2), glows are not shown.", element);
       guided = true;
       return;
     }
@@ -363,6 +367,32 @@ export function watchForm(element: HTMLFormElement, options: FormOptions = {}): 
     if (options.onSubmit) track(options.onSubmit(submit), submit.submitter ?? null);
   };
 
+  // Sans framework : les éléments du formulaire sont branchés ici, avant la première lecture (§2.4)
+  const wired = new Map<Element, { destroy(): void }>();
+  const wire = () => {
+    const controls = [...element.elements];
+    for (const control of controls) {
+      if (wired.has(control)) continue;
+      // Un élément déjà branché (par le dev, par un composant) n'est jamais remplacé
+      if (control instanceof HTMLInputElement && (control.type === "checkbox" || control.type === "radio")) {
+        if (!choiceOf(control)) wired.set(control, watchChoice(control));
+      } else if (control instanceof HTMLInputElement && TEXT_TYPES.has(control.type)) {
+        if (!fieldOf(control)) wired.set(control, watchField(control));
+      } else if (control instanceof HTMLButtonElement && control.type === "submit") {
+        if (!buttonOf(control)) wired.set(control, watchButton(control));
+      }
+    }
+    for (const [control, handle] of wired) {
+      if (controls.includes(control as (typeof controls)[number])) continue;
+      handle.destroy();
+      wired.delete(control);
+    }
+  };
+  const auto = options.fields !== "manual";
+  const fieldObserver = auto && typeof MutationObserver === "function" ? new MutationObserver(wire) : undefined;
+  if (auto) wire();
+  fieldObserver?.observe(element, { childList: true, subtree: true });
+
   element.addEventListener("invalid", onInvalid, true);
   element.addEventListener("submit", onSubmit);
   element.addEventListener("input", onInput, true);
@@ -411,6 +441,9 @@ export function watchForm(element: HTMLFormElement, options: FormOptions = {}): 
       waitSeen?.();
       if (flush !== undefined) clearTimeout(flush);
       cancelWave();
+      fieldObserver?.disconnect();
+      for (const handle of wired.values()) handle.destroy();
+      wired.clear();
       if (controllers.get(element) === controller) controllers.delete(element);
     },
   };

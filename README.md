@@ -73,7 +73,7 @@ ref.current?.trigger("pulse", { color: "success" });
 - `ref` receives the native element (compatible with react-hook-form), plus `trigger()`.
 - `onEffectEnd` is always called, even when the effect is skipped (`reason: "skipped"`): choreographies never get stuck.
 - `<Light>` adds the light border to any element: `<Light status="valid"><div className="card" /></Light>`.
-- Without React: `light(element, { status })` from `@shader-ui/core`.
+- Without React, one call wires the whole form (fields, checkboxes, radios, submit buttons): `watchForm(form, { guide: true, onSubmit: (e) => (e.preventDefault(), save()) })` from `@shader-ui/core`. HTML only: `<form data-shader-ui="form" data-sui-guide>` with `autoInit()`.
 - Server check (name already taken, promo code): set `aria-busy` while waiting and keep `aria-invalid` until the new answer, otherwise the field turns green before the server has confirmed. Start the check after the same typing pause as the library (`TYPING_PAUSE`, 1 s) or on blur.
 - Visibility: an effect never plays on an element that cannot be seen (off screen, covered by a modal, under the virtual keyboard). The module is also available on its own: `const { state, seen } = useVisibility(ref)` in React, or `observeVisibility(element, listener)` and `canBeSeen(element)`.
 
@@ -102,6 +102,16 @@ Speed: `speed` (px/s, 600 by default), also a prop of `<RevealLinks>` and `<Ligh
 ```
 
 The library only sets `data-sui-link` and two computed variables; the rendering lives in `styles.css`. A site rule that wins anyway (an id selector, `!important`) keeps its link style: the link stays visible as a link, without the reveal. Target `[data-sui-link]` to fix it. Pulse color: `--sui-link-light`. Use it on the body of a text, not on navigation, menus or footers.
+
+## Nothing lights up?
+
+Type in the browser console, with or without a bundler, in development or production:
+
+- `shaderUI.debug()`: analyzes the page (handled elements, visibility, light backgrounds, canvas size), then explains every skipped effect. Kept for the tab, reloads included.
+- `shaderUI.debug(false)`: turns it off.
+- `shaderUI.status()`: environment, renderer, active effects, global switch.
+
+`onEffectEnd` also gives the `cause` of a skipped effect: `disabled`, `forced-colors`, `not-visible`, `rate-limit` or `reduced-motion`.
 
 ## Guarantees
 

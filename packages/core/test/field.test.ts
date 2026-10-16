@@ -277,7 +277,7 @@ describe("mode dev", () => {
     watch(el);
     el.setAttribute("aria-invalid", "true");
     await flush();
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining("aria-describedby"));
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("aria-describedby"), expect.any(Element));
   });
 });
 

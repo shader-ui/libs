@@ -1,6 +1,6 @@
 # Formulaire
 
-> Spécification Shader UI · `Form` et ses éléments · version 0.1 · **validée**
+> Spécification Shader UI · `Form` et ses éléments · version 0.2 · **validée**
 > Dépend de : [Environnement](environment.md), [Visibilité](visibility.md), [Liens révélés](reveal-links.md) (tracé du trait sous la `<legend>`, §5.4)
 
 Le formulaire et ses éléments repensés avec la lumière : Input, Button, Checkbox et Radio. Les éléments sont redessinés, mais leur sens reste natif.
@@ -58,6 +58,18 @@ Le formulaire et chacun de ses champs sont suivis par le module [Visibilité](vi
 - **`ready`** (vrai par défaut) : seule exception au principe 9, réservée à ce que la lib ne peut pas lire (iframe, widget tiers : captcha, paiement). Exemple : `<Form ready={!!captchaToken}>`.
 - Le pulse « prêt » et l'état d'envoi sont joués sur le bouton (§4).
 - **Envoi en cours** : quand `onSubmit` renvoie une promesse, le Form pose `aria-busy` sur le bouton cliqué (`event.submitter`) jusqu'à la réponse. Les envois suivants sont ignorés pendant ce temps, sans désactiver le bouton (évite le double paiement).
+
+### 2.4 Sans framework : un seul appel
+
+```ts
+watchForm(form, { guide: true, onSubmit: (e) => (e.preventDefault(), save()) });
+```
+
+- **`fields: "auto"`** (défaut) : `watchForm` branche lui-même les éléments du formulaire (`form.elements`) : champs texte (`watchField`), cases et radios (`watchChoice`), boutons d'envoi (`watchButton`). Les éléments ajoutés plus tard sont branchés, ceux retirés débranchés.
+- Un élément **déjà branché** n'est jamais remplacé.
+- `destroy()` débranche ce que `watchForm` a branché, et seulement cela.
+- **`fields: "manual"`** : rien n'est branché. Le `<Form>` React l'utilise, ses composants se branchent eux-mêmes.
+- **HTML seul** : `autoInit()` branche `<form data-shader-ui="form">`, et `data-sui-guide` active le mode init.
 
 ---
 
@@ -262,6 +274,10 @@ Seulement l'essentiel : ce qui protège l'utilisateur, les garanties de la lib, 
 | `onSubmit` renvoie une promesse | `aria-busy` sur le bouton cliqué, puis sweep vert ou pulse corail |
 | Deuxième envoi pendant l'attente | ignoré, bouton toujours actif et focusable |
 | `ready` faux, puis vrai en dernier | pulse « prêt » à ce moment |
+| `watchForm(form)` sur un formulaire HTML | champs, cases, radios et bouton d'envoi branchés ; `destroy()` les débranche |
+| Champ déjà branché par le dev, ou ajouté plus tard | le premier gardé tel quel, le second branché |
+| `fields: "manual"` | rien n'est branché |
+| `<form data-shader-ui="form" data-sui-guide>` et `autoInit()` | formulaire branché, mode init actif |
 
 ### 6.4 Input (§3)
 
@@ -308,5 +324,6 @@ Seulement l'essentiel : ce qui protège l'utilisateur, les garanties de la lib, 
 
 ## Historique
 
+- **0.2** : `watchForm` branche lui-même ses éléments (`fields: "auto"`), et `autoInit()` reconnaît `data-shader-ui="form"` (§2.4).
 - **0.1** (révision) : renvoi aux conventions retiré, elles vivent sur le site ; les règles ne changent pas.
 - **0.1** : première version validée.

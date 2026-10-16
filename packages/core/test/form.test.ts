@@ -1,12 +1,27 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ERROR_STAGGER, INVALID_WAIT, light, TYPING_PAUSE, watchButton, watchField, watchForm, type Button, type FormController } from "../src/index.js";
+import {
+  autoInit,
+  buttonOf,
+  choiceOf,
+  ERROR_STAGGER,
+  fieldOf,
+  formOf,
+  INVALID_WAIT,
+  light,
+  TYPING_PAUSE,
+  watchButton,
+  watchField,
+  watchForm,
+  type Button,
+  type FormController,
+} from "../src/index.js";
 import { resetVisibility } from "../src/visibility.js";
 import { createTestEngine } from "./helpers.js";
 
 /** Horloge simulée dans ce fichier : on la fait avancer de 0 ms, ce qui vide aussi les microtâches. */
 const flush = () => vi.advanceTimersByTimeAsync(0);
 
-/** Tests de conformité : spec Formulaire §6.3 (envoi) et §6.5 (Button, hors pulse « prêt »). */
+/** Tests de conformité : spec Formulaire §6.3 (envoi, branchement sans framework) et §6.5 (Button, hors pulse « prêt »). */
 
 const played = new Map<Element, string[]>();
 const cleanups: Array<() => void> = [];
@@ -29,7 +44,8 @@ function setup(html: string, onSubmit?: (e: SubmitEvent) => unknown, ready?: boo
   document.body.innerHTML = html;
   const form = document.querySelector("form")!;
   form.addEventListener("submit", (e) => e.preventDefault());
-  const controller = watchForm(form, { onSubmit, ready });
+  // Champs branchés un par un ci-dessous, avec leur lumière espionnée
+  const controller = watchForm(form, { onSubmit, ready, fields: "manual" });
   cleanups.push(() => controller.destroy());
   for (const el of form.querySelectorAll<HTMLInputElement>("input")) {
     onScreen(el);
@@ -308,5 +324,68 @@ describe("pulse « prêt » (§4.2, §6.5)", () => {
     expect(controller.ready).toBe(true);
     await vi.advanceTimersByTimeAsync(TYPING_PAUSE * 2);
     expect(played.get(button)).toEqual([]);
+  });
+});
+
+describe("sans framework : un seul appel (§2.4)", () => {
+  const HTML = `<form>
+    <label for="n">Nom</label><input id="n" required>
+    <label><input type="checkbox" required> Conditions</label>
+    <label><input type="radio" name="d" value="a"> A</label>
+    <input type="hidden" name="t"><button type="button">Aide</button><button>Envoyer</button>
+  </form>`;
+  const controls = (form: HTMLFormElement) => ({
+    field: form.querySelector<HTMLInputElement>("#n")!,
+    check: form.querySelector<HTMLInputElement>("[type=checkbox]")!,
+    radio: form.querySelector<HTMLInputElement>("[type=radio]")!,
+    help: form.querySelector<HTMLButtonElement>("[type=button]")!,
+    submit: form.querySelector<HTMLButtonElement>("button:not([type])")!,
+  });
+
+  it("watchForm(form) : champs, cases, radios et bouton d'envoi branchés ; destroy() les débranche", () => {
+    document.body.innerHTML = HTML;
+    const form = document.querySelector("form")!;
+    const c = controls(form);
+    const controller = watchForm(form);
+    expect([fieldOf(c.field), choiceOf(c.check), choiceOf(c.radio), buttonOf(c.submit)].every(Boolean)).toBe(true);
+    expect(buttonOf(c.help)).toBeUndefined();
+    controller.destroy();
+    expect([fieldOf(c.field), choiceOf(c.check), choiceOf(c.radio), buttonOf(c.submit)].some(Boolean)).toBe(false);
+  });
+
+  it("champ déjà branché par le dev : gardé tel quel ; champ ajouté plus tard : branché", async () => {
+    document.body.innerHTML = HTML;
+    const form = document.querySelector("form")!;
+    const mine = watchField(controls(form).field);
+    const controller = watchForm(form);
+    cleanups.push(() => controller.destroy(), () => mine.destroy());
+    expect(fieldOf(controls(form).field)).toBe(mine);
+    const later = document.createElement("input");
+    later.type = "email";
+    form.append(later);
+    await flush();
+    expect(fieldOf(later)).toBeDefined();
+    controller.destroy();
+    expect(fieldOf(controls(form).field)).toBe(mine);
+  });
+
+  it("fields: manual : rien n'est branché", () => {
+    document.body.innerHTML = HTML;
+    const form = document.querySelector("form")!;
+    const controller = watchForm(form, { fields: "manual" });
+    cleanups.push(() => controller.destroy());
+    const c = controls(form);
+    expect([fieldOf(c.field), choiceOf(c.check), buttonOf(c.submit)].some(Boolean)).toBe(false);
+  });
+
+  it("<form data-shader-ui=form data-sui-guide> et autoInit() : formulaire branché, mode init actif", () => {
+    document.body.innerHTML = HTML.replace("<form>", `<form data-shader-ui="form" data-sui-guide>`);
+    const stop = autoInit();
+    cleanups.push(stop);
+    const form = document.querySelector("form")!;
+    expect(formOf(form)).toBeDefined();
+    expect(fieldOf(controls(form).field)).toBeDefined();
+    // Mode init : la place de la lueur est réservée sur le label du champ obligatoire
+    expect(form.querySelector("label")!.dataset.suiRequired).toBeDefined();
   });
 });

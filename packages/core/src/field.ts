@@ -21,7 +21,7 @@ export interface Field {
 }
 
 /** Types gérés par le champ (§3) ; les autres ont leur composant ou sont hors périmètre. */
-const TEXT_TYPES = new Set(["text", "email", "password", "search", "tel", "url", "number", "date", "time", "datetime-local", "month", "week"]);
+export const TEXT_TYPES = new Set(["text", "email", "password", "search", "tel", "url", "number", "date", "time", "datetime-local", "month", "week"]);
 /** Attributs relus dès qu'ils changent (§3.1). */
 const WATCHED = ["aria-invalid", "aria-busy", "required", "disabled", "readonly"];
 /** Effet joué en entrant dans un état (§3.2). */
@@ -49,9 +49,9 @@ export function watchField(element: HTMLInputElement): Field {
   const lit = (): Light => (lightOf(element) ?? own)!;
 
   if (element.type === "checkbox" || element.type === "radio") {
-    warn(`<input type="${element.type}"> : utilisez le composant Checkbox ou Radio.`);
+    warn(`<input type="${element.type}">: use the Checkbox or Radio component.`, element);
   } else if (!TEXT_TYPES.has(element.type)) {
-    warn(`<input type="${element.type}"> est hors périmètre : aucune lumière n'y est jouée.`);
+    warn(`<input type="${element.type}"> is out of scope: no light is played on it.`, element);
   }
 
   /** Valeur modifiée depuis la dernière sortie du champ. */
@@ -110,7 +110,7 @@ export function watchField(element: HTMLInputElement): Field {
     if (next === "neutral") delete element.dataset.suiState;
     else element.dataset.suiState = next;
     if (next === "error" && !element.getAttribute("aria-describedby") && !element.getAttribute("aria-errormessage")) {
-      warn("champ en erreur sans texte associé : liez un message par aria-describedby ou aria-errormessage (WCAG 1.4.1).");
+      warn("field in error without a text: link a message with aria-describedby or aria-errormessage (WCAG 1.4.1).", element);
     }
 
     pending = undefined;

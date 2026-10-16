@@ -334,7 +334,7 @@ describe("abonnés et mémoire (§4.9, §7)", () => {
     start(inner);
     expect(FakeIntersectionObserver.instances).toHaveLength(0);
     expect(getVisibility(inner).state).toBe("unknown");
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("iframe"));
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("iframe"), expect.anything());
     warnSpy.mockRestore();
   });
 

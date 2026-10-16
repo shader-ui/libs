@@ -99,6 +99,8 @@ describe("mode init (§2.2, §6.2)", () => {
     await Promise.resolve();
     expect(glowing()).toContain("Nom");
     nom.removeAttribute("aria-invalid");
+    // Le champ, branché par watchForm, relit son état ; puis le formulaire relit celui du champ
+    await Promise.resolve();
     await Promise.resolve();
     expect(glowing()).not.toContain("Nom");
   });
@@ -109,7 +111,7 @@ describe("mode init (§2.2, §6.2)", () => {
     focusIn(form);
     vi.advanceTimersByTime(1000);
     expect(glowing()).toEqual([]);
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining("WCAG 3.3.2"));
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("WCAG 3.3.2"), expect.any(Element));
   });
 
   it("nouveau geste : pas de nouvelle apparition ; destroy retire les lueurs", () => {

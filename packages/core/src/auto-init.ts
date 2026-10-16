@@ -1,8 +1,14 @@
 import { isBrowser } from "./env.js";
+import { watchForm } from "./form.js";
 import { revealLinks, type RevealInitial } from "./reveal-links.js";
 
-/** Attributs HTML pour un CMS, du PHP ou du Markdown : `<article data-shader-ui="reveal-links">`. */
-const SELECTOR = '[data-shader-ui~="reveal-links"]';
+/**
+ * Attributs HTML pour un CMS, du PHP ou du Markdown : `<article data-shader-ui="reveal-links">`,
+ * `<form data-shader-ui="form" data-sui-guide>` (spec Formulaire §2.4).
+ */
+const LINKS = '[data-shader-ui~="reveal-links"]';
+const FORM = 'form[data-shader-ui~="form"]';
+const SELECTOR = `${LINKS}, ${FORM}`;
 
 let stopAll: (() => void) | undefined;
 
@@ -22,7 +28,13 @@ export function autoInit(): () => void {
     for (const el of found) {
       if (stops.has(el)) continue;
       const { suiInitial, suiSpeed } = (el as HTMLElement).dataset;
-      stops.set(el, revealLinks(el, { initial: suiInitial as RevealInitial | undefined, speed: suiSpeed ? Number(suiSpeed) : undefined }));
+      const parts: Array<() => void> = [];
+      if (el.matches(LINKS)) parts.push(revealLinks(el, { initial: suiInitial as RevealInitial | undefined, speed: suiSpeed ? Number(suiSpeed) : undefined }));
+      if (el instanceof HTMLFormElement && el.matches(FORM)) {
+        const form = watchForm(el, { guide: el.hasAttribute("data-sui-guide") });
+        parts.push(() => form.destroy());
+      }
+      stops.set(el, () => parts.forEach((stop) => stop()));
     }
   };
   const release = (el: Element) => {

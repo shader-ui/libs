@@ -81,7 +81,7 @@ describe("règles", () => {
     const events = els.map(endEvents);
     els.forEach((el) => light(el).trigger("pulse"));
     await flush();
-    expect(events[3]).toEqual([{ name: "pulse", reason: "skipped" }]);
+    expect(events[3]).toEqual([{ name: "pulse", reason: "skipped", cause: "rate-limit" }]);
     t.advance(1001);
     light(els[3]!).trigger("pulse");
     expect(t.engine.getStats().active).toBe(4);
@@ -94,7 +94,7 @@ describe("règles", () => {
     const events = endEvents(el);
     light(el).trigger("success");
     await flush();
-    expect(events).toEqual([{ name: "success", reason: "skipped" }]);
+    expect(events).toEqual([{ name: "success", reason: "skipped", cause: "disabled" }]);
     expect(t.pendingFrames).toBe(0);
   });
 
@@ -108,7 +108,7 @@ describe("règles", () => {
     light(b).trigger("sweep");
     t.tick();
     await flush();
-    expect(events).toEqual([{ name: "loading", reason: "skipped" }]);
+    expect(events).toEqual([{ name: "loading", reason: "skipped", cause: "reduced-motion" }]);
     expect(t.rendered.at(-1)).toHaveLength(1);
     expect(t.rendered.at(-1)![0]).toMatchObject({ kind: 0, progress: 0 });
   });
@@ -123,7 +123,7 @@ describe("contraste élevé (forced-colors)", () => {
     light(el).trigger("success");
     await flush();
     expect(t.pendingFrames).toBe(0);
-    expect(events).toEqual([{ name: "success", reason: "skipped" }]);
+    expect(events).toEqual([{ name: "success", reason: "skipped", cause: "forced-colors" }]);
     vi.unstubAllGlobals();
   });
 });
@@ -152,6 +152,6 @@ describe("vérification avant effet (spec Visibilité §6)", () => {
     light(el).trigger("success");
     await flush();
     expect(t.pendingFrames).toBe(0);
-    expect(events).toEqual([{ name: "success", reason: "skipped" }]);
+    expect(events).toEqual([{ name: "success", reason: "skipped", cause: "not-visible" }]);
   });
 });

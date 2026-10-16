@@ -56,6 +56,11 @@ function radiosOf(radio: HTMLInputElement): HTMLInputElement[] {
   );
 }
 
+/** Le contrôleur d'une case ou d'un radio, s'il en a un. */
+export function choiceOf(element: HTMLInputElement): Choice | undefined {
+  return choices.get(element);
+}
+
 /** Branche le contrôleur sur un `<input type="checkbox">` ou `<input type="radio">` natif. */
 export function watchChoice(element: HTMLInputElement): Choice {
   choices.get(element)?.destroy();

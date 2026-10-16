@@ -34,7 +34,7 @@ export const Form = forwardRef<HTMLFormElement, FormProps>(function Form({ onSub
 
   useEffect(() => {
     if (!element) return;
-    const handle = watchForm(element, { ready, guide });
+    const handle = watchForm(element, { ready, guide, fields: "manual" });
     controller.current = handle;
     return () => {
       handle.destroy();

@@ -1,5 +1,5 @@
 import { getEffect, type EffectDefinition } from "./effects.js";
-import { getEngine, type EndReason, type Origin } from "./engine.js";
+import { getEngine, type EndReason, type Origin, type SkipCause } from "./engine.js";
 import { warn } from "./env.js";
 import type { ColorToken } from "./tokens.js";
 
@@ -8,6 +8,8 @@ export const EFFECT_END_EVENT = "sui:effectend";
 export interface EffectEndDetail {
   name: string;
   reason: EndReason;
+  /** Avec `reason: "skipped"` : pourquoi (spec Diagnostic §3). */
+  cause?: SkipCause;
 }
 
 export interface TriggerOptions {
@@ -41,8 +43,8 @@ export function light(element: HTMLElement): Light {
   lights.get(element)?.destroy();
   const engine = getEngine();
 
-  const dispatchEnd = (name: string, reason: EndReason) => {
-    const detail: EffectEndDetail = { name, reason };
+  const dispatchEnd = (name: string, reason: EndReason, cause?: SkipCause) => {
+    const detail: EffectEndDetail = cause ? { name, reason, cause } : { name, reason };
     element.dispatchEvent(new CustomEvent(EFFECT_END_EVENT, { detail, bubbles: true }));
   };
 
@@ -59,7 +61,7 @@ export function light(element: HTMLElement): Light {
       }
       const base = typeof effect === "string" ? getEffect(effect) : effect;
       if (!base) {
-        warn(`effet inconnu : « ${name} ».`);
+        warn(`unknown effect: "${name}".`, element);
         queueMicrotask(() => dispatchEnd(name, "skipped"));
         return;
       }
@@ -69,7 +71,7 @@ export function light(element: HTMLElement): Light {
         wave: triggerOptions.wave,
         box: triggerOptions.box,
         reverse: triggerOptions.reverse,
-        onEnd: (reason) => dispatchEnd(name, reason),
+        onEnd: (reason, cause) => dispatchEnd(name, reason, cause),
       });
     },
 
