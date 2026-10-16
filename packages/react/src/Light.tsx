@@ -9,7 +9,7 @@ import { useLight, type LightProps, type ShaderElement } from "./use-light.js";
 export interface LightComponentProps extends LightProps {
   /** Un seul élément DOM, qui reçoit la bordure lumineuse. */
   children: ReactElement;
-  /** Révèle le lien au lieu de lui ajouter une bordure : l'enfant doit être un `<a>` (spec Liens qui se dessinent §8). */
+  /** Révèle le lien au lieu de lui ajouter une bordure : l'enfant doit être un `<a>` (spec Liens révélés §8). */
   reveal?: boolean;
   /** Avec `reveal` : apparence avant le passage, `"text"` par défaut. */
   initial?: RevealInitial;

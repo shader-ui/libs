@@ -6,7 +6,7 @@ import { UNDERLINE_MAX, UNDERLINE_MIN, UNDERLINE_SPEED } from "./underline.js";
 import { canBeSeen, observeVisibility } from "./visibility.js";
 
 /**
- * Liens qui se dessinent : voir `docs/spec/reveal-links.md` (fait foi).
+ * Liens révélés : voir `docs/spec/reveal-links.md` (fait foi).
  * L'état du lien est posé en `data-sui-link`, son rendu est dans `styles.css` ; seules les valeurs
  * calculées sont en inline (`--sui-link-color`, `--sui-link-progress`).
  */

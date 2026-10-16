@@ -1,4 +1,4 @@
-# Liens qui se dessinent
+# Liens révélés
 
 > Spécification Shader UI · effet `reveal-links` · version 0.2 · **validée**
 > Dépend de : [Visibilité](visibility.md), [Environnement](environment.md)

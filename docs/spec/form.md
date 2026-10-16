@@ -1,7 +1,7 @@
 # Formulaire
 
 > Spécification Shader UI · `Form` et ses éléments · version 0.1 · **validée**
-> Dépend de : [Environnement](environment.md), [Visibilité](visibility.md), [Liens qui se dessinent](reveal-links.md) (tracé du trait sous la `<legend>`, §5.4)
+> Dépend de : [Environnement](environment.md), [Visibilité](visibility.md), [Liens révélés](reveal-links.md) (tracé du trait sous la `<legend>`, §5.4)
 
 Le formulaire et ses éléments repensés avec la lumière : Input, Button, Checkbox et Radio. Les éléments sont redessinés, mais leur sens reste natif.
 

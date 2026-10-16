@@ -251,7 +251,7 @@ input[data-sui-choice]:disabled {
   }
 }
 
-/* Liens qui se dessinent (spec Liens qui se dessinent §6.4). État posé par revealLinks en data-sui-link ;
+/* Liens révélés (spec Liens révélés §6.4). État posé par revealLinks en data-sui-link ;
    valeurs calculées en inline : --sui-link-color (couleur du site), --sui-link-progress (avancée, 0 → 1).
    Vraie spécificité : le sens l'emporte sur `.prose a`. Un site qui l'emporte quand même (id, !important)
    garde son style de lien : échec sûr, corrigé en ciblant [data-sui-link]. Pulsation : --sui-link-light.

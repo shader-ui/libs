@@ -16,7 +16,7 @@ import { createTestEngine } from "./helpers.js";
 /** Rappels du MutationObserver (microtâches) : les minuteurs sont simulés. */
 const mutations = () => Promise.resolve();
 
-/** Tests de conformité : spec Liens qui se dessinent §11. */
+/** Tests de conformité : spec Liens révélés §11. */
 
 // Visibilité simulée : « vu » sur commande, `covered` pour un lien sous une modale
 const watchers = new Map<Element, (v: Visibility) => void>();

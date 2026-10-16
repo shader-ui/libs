@@ -124,7 +124,7 @@ describe("environnement", () => {
   });
 });
 
-describe("Liens qui se dessinent", () => {
+describe("Liens révélés", () => {
   beforeEach(() => {
     vi.stubGlobal("IntersectionObserver", class { observe() {} unobserve() {} disconnect() {} });
   });

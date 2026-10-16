@@ -11,7 +11,7 @@ Les mots **DOIT**, **NE DOIT PAS**, **DEVRAIT** et **PEUT** ont le sens de la RF
 | Famille | Exemples | Effets |
 |---|---|---|
 | **Boîtes** | `button`, `input`, `textarea`, `select`, carte, `img`, `video`, `div` | effets de contour (pulse, sweep, ripple, orbit) |
-| **Texte en ligne** | lien dans une phrase | [liens qui se dessinent](reveal-links.md) |
+| **Texte en ligne** | lien dans une phrase | [liens révélés](reveal-links.md) |
 
 Le contour suit l'arrondi (`border-radius`) : cercles et pilules sont gérés. Les éléments `fixed` et `sticky` sont gérés : leur position est relue à chaque frame.
 

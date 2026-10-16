@@ -1,7 +1,7 @@
 import { getEffect } from "./effects.js";
 import { light, lightOf } from "./light.js";
 
-/** Trait sous un texte : vitesse constante, durée bornée (spec Liens qui se dessinent §6.2). */
+/** Trait sous un texte : vitesse constante, durée bornée (spec Liens révélés §6.2). */
 export const UNDERLINE_SPEED = 1200;
 export const UNDERLINE_MIN = 250;
 export const UNDERLINE_MAX = 700;

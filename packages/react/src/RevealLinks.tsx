@@ -9,7 +9,7 @@ export interface RevealLinksProps extends RevealLinksOptions {
   children: ReactElement;
 }
 
-/** Révèle les liens de son unique enfant quand le lecteur arrive dessus (spec Liens qui se dessinent). */
+/** Révèle les liens de son unique enfant quand le lecteur arrive dessus (spec Liens révélés). */
 export const RevealLinks = forwardRef<HTMLElement, RevealLinksProps>(function RevealLinks({ children, ignore, initial }, forwardedRef) {
   const child = Children.only(children) as ReactElement<Record<string, unknown>>;
   const refs = useRef({ forwardedRef, childRef: childRefOf<HTMLElement>(child) });
