@@ -19,7 +19,7 @@ Rien dans le code du site : le dev l'active dans la console du navigateur, avec 
 | `shaderUI.debug(false)` | le coupe |
 | `shaderUI.status()` | affiche l'état : environnement, rendu, taille du canvas, effets en cours, interrupteur |
 
-La lib DOIT exposer l'objet global `shaderUI` dès sa première utilisation dans la page, et seulement ces commandes.
+La lib DOIT exposer l'objet global `shaderUI` dès sa première utilisation dans la page, et seulement ces commandes. Au rechargement, un mode repris DOIT être annoncé dans la console, et l'analyse relancée une fois la page chargée.
 
 ---
 
@@ -43,6 +43,8 @@ Un effet sauté (`reason: "skipped"`) DOIT porter sa cause dans `onEffectEnd` et
 | `cause` | Situation |
 |---|---|
 | `"disabled"` | interrupteur global coupé |
+| `"inactive"` | élément désactivé ou en lecture seule |
+| `"unknown-effect"` | effet demandé inconnu |
 | `"forced-colors"` | contraste élevé |
 | `"not-visible"` | hors écran, masqué, couvert ou sous le clavier (Visibilité) |
 | `"rate-limit"` | plus de 3 effets par seconde (WCAG 2.3.1) |
@@ -77,7 +79,7 @@ Un effet sauté (`reason: "skipped"`) DOIT porter sa cause dans `onEffectEnd` et
 | Effet sur un élément couvert | `reason: "skipped"`, `cause: "not-visible"` |
 | Quatrième effet dans la seconde | `cause: "rate-limit"` |
 | Mode diagnostic coupé, hors dev | aucun message |
-| `shaderUI.debug()` puis rechargement, sans bundler | messages de détail émis dès le chargement |
+| `shaderUI.debug()` puis rechargement, sans bundler | mode annoncé, analyse relancée, messages de détail émis dès le chargement |
 | `shaderUI.debug(false)` | plus aucun message de détail |
 | Même effet sauté deux fois sur le même élément | un seul message |
 | Canvas réduit par `body > * { max-width }` avec `!important` | anomalie signalée |

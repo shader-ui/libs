@@ -9,7 +9,7 @@ import { createWebGLBackend, KIND_ID, type Backend, type Instance } from "./webg
 
 export type EndReason = "complete" | "interrupted" | "skipped";
 /** Pourquoi un effet a été sauté (spec Diagnostic §3). */
-export type SkipCause = "disabled" | "forced-colors" | "not-visible" | "rate-limit" | "reduced-motion";
+export type SkipCause = "disabled" | "inactive" | "unknown-effect" | "forced-colors" | "not-visible" | "rate-limit" | "reduced-motion";
 
 /** Point de départ de la lumière : fraction du périmètre, ou point en coordonnées client. */
 export type Origin = number | { x: number; y: number };

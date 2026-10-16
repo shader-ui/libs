@@ -1,6 +1,6 @@
 import { getEffect, type EffectDefinition } from "./effects.js";
 import { getEngine, type EndReason, type Origin, type SkipCause } from "./engine.js";
-import { warn } from "./env.js";
+import { detail, warn } from "./env.js";
 import type { ColorToken } from "./tokens.js";
 
 export const EFFECT_END_EVENT = "sui:effectend";
@@ -56,13 +56,14 @@ export function light(element: HTMLElement): Light {
       // Élément désactivé ou en lecture seule : aucun effet, la fin est quand même signalée
       const control = element as Partial<HTMLInputElement>;
       if (control.disabled === true || control.readOnly === true) {
-        queueMicrotask(() => dispatchEnd(name, "skipped"));
+        detail(`${name} effect skipped (inactive).`, element);
+        queueMicrotask(() => dispatchEnd(name, "skipped", "inactive"));
         return;
       }
       const base = typeof effect === "string" ? getEffect(effect) : effect;
       if (!base) {
         warn(`unknown effect: "${name}".`, element);
-        queueMicrotask(() => dispatchEnd(name, "skipped"));
+        queueMicrotask(() => dispatchEnd(name, "skipped", "unknown-effect"));
         return;
       }
       const def = triggerOptions.color ? { ...base, color: triggerOptions.color } : base;

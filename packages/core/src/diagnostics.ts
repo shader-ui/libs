@@ -138,11 +138,22 @@ export function installConsole(): void {
   if (installed || !isBrowser()) return;
   installed = true;
   (globalThis as Record<string, unknown>).shaderUI = Object.freeze({ debug, status });
+  let kept = false;
   try {
-    if (sessionStorage.getItem(STORAGE_KEY) === "1") setDebugMode(true);
+    kept = sessionStorage.getItem(STORAGE_KEY) === "1";
   } catch {
     // Stockage indisponible : mode diagnostic coupé
   }
+  if (!kept) return;
+  setDebugMode(true);
+  // Annoncé, et l'analyse relancée une fois la page chargée : tous les éléments sont en place
+  const announce = () =>
+    setTimeout(() => {
+      console.info("[shader-ui] debug mode still on for this tab. shaderUI.debug(false) turns it off.");
+      analyze();
+    });
+  if (document.readyState === "complete") announce();
+  else window.addEventListener("load", announce, { once: true });
 }
 
 /** Remet le module à zéro (tests). */

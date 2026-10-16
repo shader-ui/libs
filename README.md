@@ -111,7 +111,7 @@ Type in the browser console, with or without a bundler, in development or produc
 - `shaderUI.debug(false)`: turns it off.
 - `shaderUI.status()`: environment, renderer, active effects, global switch.
 
-`onEffectEnd` also gives the `cause` of a skipped effect: `disabled`, `forced-colors`, `not-visible`, `rate-limit` or `reduced-motion`.
+`onEffectEnd` also gives the `cause` of a skipped effect: `disabled`, `inactive`, `unknown-effect`, `forced-colors`, `not-visible`, `rate-limit` or `reduced-motion`.
 
 ## Guarantees
 

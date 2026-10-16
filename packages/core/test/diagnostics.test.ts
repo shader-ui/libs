@@ -94,6 +94,9 @@ describe("activation par la console (§1, §2)", () => {
     light(element()).trigger("success");
     await flush();
     expect(skipped()).toHaveLength(1);
+    // Le mode repris s'annonce, et l'analyse est relancée
+    expect(console.info).toHaveBeenCalledWith(expect.stringContaining("still on for this tab"));
+    expect(console.info).toHaveBeenCalledWith(expect.stringContaining("element(s) handled"));
   });
 });
 

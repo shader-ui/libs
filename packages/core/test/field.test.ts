@@ -226,7 +226,7 @@ describe("lumière selon la transition (§3.2)", () => {
     el.addEventListener(EFFECT_END_EVENT, (e) => ends.push((e as CustomEvent<EffectEndDetail>).detail));
     light(el).trigger("pulse");
     await flush();
-    expect(ends).toEqual([{ name: "pulse", reason: "skipped" }]);
+    expect(ends).toEqual([{ name: "pulse", reason: "skipped", cause: "inactive" }]);
   });
 });
 
