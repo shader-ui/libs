@@ -199,18 +199,7 @@ Les couleurs du lien et du texte ne sont pas des tokens : ce sont celles du site
 
 ---
 
-## 10. Conventions
-
-**À faire**
-- Sur le corps d'un texte : article, documentation, description.
-
-**À éviter**
-- Sur la navigation, le menu ou le pied de page : ces liens sont déjà identifiés par leur place.
-- Sur une page où presque tout est un lien (liste de résultats, sommaire) : l'effet ne distingue plus rien.
-
----
-
-## 11. Tests de conformité
+## 10. Tests de conformité
 
 | Cas | Attendu |
 |---|---|
@@ -242,6 +231,14 @@ Les couleurs du lien et du texte ne sont pas des tokens : ce sont celles du site
 
 ---
 
-## 12. Réglages dans le lab
+## 11. Réglages dans le lab
 
 La vitesse (1 200 px/s) et la couleur de la pulsation sont des valeurs de départ, à régler dans le lab.
+
+---
+
+## Historique
+
+- **0.2** (révision) : renommée « Liens révélés » ; conventions retirées, elles vivent sur le site (couche Conventions du référentiel) ; les règles ne changent pas.
+- **0.2** : validée avec le code de l'effet.
+- **0.1** : première version validée.

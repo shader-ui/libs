@@ -126,7 +126,7 @@ Texte ≥ **16 px** (sinon iOS zoome au focus), hauteur ≥ **44 px**, bordure e
 
 ### 4.1 Jamais désactivé par la lib
 
-La lib NE DOIT PAS désactiver un bouton d'envoi selon la validité du formulaire : l'utilisateur ne saurait pas ce qui manque, le bouton perdrait le focus clavier, et l'autofill (iOS) le laisserait souvent bloqué. Un formulaire incomplet est arrêté par la validation native au clic, et le premier champ invalide pulse (§2.3). Un `disabled` posé par le dev est respecté (aucun effet) ; les conventions le classent « à éviter ».
+La lib NE DOIT PAS désactiver un bouton d'envoi selon la validité du formulaire : l'utilisateur ne saurait pas ce qui manque, le bouton perdrait le focus clavier, et l'autofill (iOS) le laisserait souvent bloqué. Un formulaire incomplet est arrêté par la validation native au clic, et le premier champ invalide pulse (§2.3). Un `disabled` posé par le dev est respecté (aucun effet), mais déconseillé pour les mêmes raisons.
 
 ### 4.2 Pulse « prêt »
 
@@ -303,3 +303,10 @@ Seulement l'essentiel : ce qui protège l'utilisateur, les garanties de la lib, 
 | Premier choix ; plus de 3 changements par seconde ; choix par script | fondu ou changement immédiat, sans trajet |
 | Case obligatoire non cochée ; groupe en erreur | pulse corail ; trait corail sous la `<legend>` |
 | `forced-colors: active` | contrôle natif (`appearance: auto`) |
+
+---
+
+## Historique
+
+- **0.1** (révision) : renvoi aux conventions retiré, elles vivent sur le site ; les règles ne changent pas.
+- **0.1** : première version validée.
