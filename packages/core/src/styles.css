@@ -37,6 +37,8 @@
   --sui-border-success: #22c55e;
   --sui-border-error: #ff6f61;
   --sui-focus: var(--sui-border-accent);
+  /* Focus des champs : sur un site clair, surcharger cette variable */
+  --sui-focus-field: var(--sui-color-neutral);
   /* Diode des champs : distance au bord de fin. `--sui-diode: none` la retire. */
   --sui-diode-inset: 18px;
 }
@@ -95,6 +97,24 @@ input[data-sui-field][data-sui-state="loading"] {
 :where([data-sui]):focus-visible {
   outline: 2px solid var(--sui-focus);
   outline-offset: 2px;
+}
+/* Focus du champ (§3.4) : contour fin en fondu, sans shader. Au repos il reste transparent pour pouvoir
+   s'estomper ; pas en contraste élevé, où le système afficherait ce contour transparent. */
+@media not (forced-colors: active) {
+  :where(input[data-sui-field]) {
+    outline: 1px solid transparent;
+    outline-offset: 0;
+    transition: outline-color 150ms ease;
+  }
+}
+/* Vraie spécificité : le sens l'emporte sur `input:focus { outline: none }` */
+input[data-sui-field][data-sui-field]:focus-visible {
+  outline: 1px solid var(--sui-focus-field);
+  outline-offset: 0;
+}
+/* Sur un champ en erreur ou valide, l'état reste le signal principal */
+input[data-sui-field][data-sui-field]:is([data-sui-state="error"], [data-sui-state="valid"]):focus-visible {
+  outline-color: color-mix(in srgb, var(--sui-focus-field) 60%, transparent);
 }
 
 /* Fallback sans WebGL2 : même sens, rendu par CSS */
@@ -340,5 +360,8 @@ input[data-sui-choice]:disabled {
 @media (prefers-reduced-motion: reduce) {
   :where([data-sui-fx="orbit"]) {
     animation: none;
+  }
+  :where(input[data-sui-field]) {
+    transition: none;
   }
 }

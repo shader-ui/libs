@@ -269,6 +269,30 @@ describe("diode (§3.3)", () => {
 
 });
 
+describe("focus", () => {
+
+  it("vérification terminée, focus gardé : le champ obligatoire passe à valid sans attendre la sortie", async () => {
+    const el = input({ required: "" });
+    watch(el);
+    el.focus();
+    type(el, "libre");
+    el.setAttribute("aria-busy", "true");
+    await flush();
+    el.removeAttribute("aria-busy");
+    await flush();
+    expect(field!.state).toBe("valid");
+    expect(played).toEqual(["loading", "success"]);
+  });
+
+  it("aucun effet joué : le focus est rendu par le CSS (§3.4)", async () => {
+    const el = input();
+    watch(el);
+    el.focus();
+    await flush();
+    expect(played).toEqual([]);
+  });
+});
+
 describe("mode dev", () => {
 
   it("erreur sans texte associé : avertissement (WCAG 1.4.1)", async () => {

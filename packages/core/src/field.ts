@@ -103,6 +103,8 @@ export function watchField(element: HTMLInputElement): Field {
    */
   function update(silent = false): void {
     const previous = state;
+    // Une vérification terminée après une saisie vaut interaction : la réponse n'attend pas la sortie du champ
+    if (previous === "loading" && dirty && element.validity.valid) interacted = true;
     const next = read();
     if (next === "error") wasError = true;
     if (next === previous) return;

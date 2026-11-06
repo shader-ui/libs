@@ -19,7 +19,7 @@ Librairie (pas un framework) de composants d'interface dont les états sont rend
   - Max 3 flashs par seconde (2.3.1). Mouvement désactivable, `prefers-reduced-motion` (2.3.3).
   - Bordure au repos et focus contrastés à 3:1 minimum, sans dépendre du shader (1.4.11, 2.4.7, 2.4.11).
   - `loading` : boucle limitée ou arrêtable au-delà de 5 s (2.2.2).
-  - Canvas en `aria-hidden`, tests de conformité automatisés (axe) en CI.
+  - Canvas en `aria-hidden`, tests de conformité.
 
 ## Architecture
 
@@ -29,10 +29,10 @@ Librairie (pas un framework) de composants d'interface dont les états sont rend
   - Le site peut l'emporter (sélecteur par id, `!important`) : l'échec doit rester sûr (élément au style du site) et documenté.
 - **Un seul canvas partagé** par page (`<ShaderProvider>`), rendu à la demande.
 - **Cœur TypeScript indépendant**, bindings framework en couches fines.
-- **Effets décrits comme des données**, compilés vers WGSL/GLSL, HLSL (Unity), Godot Shading Language (Godot), matériaux (Unreal).
+- **Effets décrits comme des données**, compilés vers WGSL/GLSL.
 - **Amélioration progressive** : fallback CSS, `prefers-reduced-motion` respecté.
 - Prototype : couleurs paramétrées le long du **périmètre** (SDF), décélération exponentielle.
-- **Zéro frame au repos, garanti et mesuré** : compteur de frames en mode dev, tests en CI, benchmarks sur Android d'entrée de gamme.
+- **Zéro frame au repos, garanti et mesuré** : compteur de frames en mode dev, tests de conformité, benchmarks sur Android d'entrée de gamme.
 
 ## Méthode
 
@@ -76,7 +76,7 @@ ref.current?.trigger("pulse", { color: "success" });
 
 ## Positionnement
 
-- Promesse : **un seul langage lumineux**, web et moteurs 3D.
+- Promesse : **un seul langage lumineux** pour tout le web.
 - **Le référentiel, pas une doc** (esprit Material Design), en 3 couches illustrées par le lab :
   - **Spécification** normative et versionnée (MUST/SHOULD) : états, format des effets, tokens, garanties de rendu. Indépendante des plateformes, avec tests de conformité.
   - **Cas d'usage** : formulaire, onboarding, notifications, paiement…
@@ -103,4 +103,4 @@ ref.current?.trigger("pulse", { color: "success" });
 ## Modèle économique
 
 - **Gratuit / open source** : moteur, composants et leurs états, effets, chorégraphies, a11y. Tout ce qui porte le sens.
-- **Payant** : variantes supplémentaires des composants (nouveaux affichages), dans un dépôt séparé.
+- **Payant** : modules supplémentaires, dans un dépôt séparé.

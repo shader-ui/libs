@@ -8,7 +8,7 @@ export type EffectKind =
   | "orbit" // un arc tourne en boucle (état en cours uniquement)
   | "underline"; // un trait avance sous le texte, dans le sens de lecture (label, legend)
 
-/** Un effet est une donnée : il se compile vers WebGL aujourd'hui, WGSL, HLSL ou matériaux demain. */
+/** Un effet est une donnée : il se compile vers WebGL aujourd'hui, WGSL demain. */
 export interface EffectDefinition {
   kind: EffectKind;
   color: ColorToken | string;

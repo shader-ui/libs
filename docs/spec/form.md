@@ -1,6 +1,6 @@
 # Formulaire
 
-> Spécification Shader UI · `Form` et ses éléments · version 0.2 · **validée**
+> Spécification Shader UI · `Form` et ses éléments · version 0.3 · **validée**
 > Dépend de : [Environnement](environment.md), [Visibilité](visibility.md), [Liens révélés](reveal-links.md) (tracé du trait sous la `<legend>`, §5.4)
 
 Le formulaire et ses éléments repensés avec la lumière : Input, Button, Checkbox et Radio. Les éléments sont redessinés, mais leur sens reste natif.
@@ -84,7 +84,7 @@ Lu, pas déclaré (principe 9). Première règle qui s'applique :
 1. `aria-busy="true"` → `loading`.
 2. `aria-invalid` présent : le dev a la main, la validité native est ignorée (`"false"` → pas d'erreur, autre valeur → `error`).
 3. Validité native invalide (`setCustomValidity` compris) → `error`, **après interaction seulement** : champ quitté avec une valeur (tapée, restaurée par le navigateur après F5, ou pré-remplie), ou tentative d'envoi. Un champ vide qu'on traverse sans rien taper reste neutre.
-4. Champ obligatoire rempli après interaction, ou champ optionnel corrigé → `valid`.
+4. Champ obligatoire rempli après interaction, ou champ optionnel corrigé → `valid`. Une vérification (`aria-busy`) terminée après une saisie, sur une valeur valide, compte comme une interaction : le résultat s'affiche sans attendre la sortie du champ.
 5. Sinon neutre : un champ optionnel valide reste neutre.
 
 - Après la première interaction, la validité est relue à chaque pause de frappe (§3.2).
@@ -105,7 +105,7 @@ Lu, pas déclaré (principe 9). Première règle qui s'applique :
 - **Sweep de validation** : un tour complet du contour, **du coin haut gauche, dans l'ordre des règles CSS** (haut → droite → bas → gauche), avec une décélération douce pour que tout le tour reste visible. **En RTL, il part du coin haut droit, dans l'autre sens.** Même règle pour le bouton (envoi réussi) et la case corrigée. Les autres effets partent de la diode (§3.3).
 - **Pause de frappe** : après une saisie, l'état est relu après `TYPING_PAUSE` = **1 s** sans frappe, ou à la sortie du champ si elle arrive avant. Un état intermédiaire pendant la frappe (`nom@domaine-`) n'est jamais montré. 1 s, c'est environ 3 fois l'intervalle moyen entre deux touches sur mobile (330 ms) : une hésitation n'est pas prise pour une fin de saisie, de 20 à 60 ans. Les changements d'attributs (`aria-busy`, `aria-invalid` posés par le serveur) sont relus tout de suite : ce ne sont pas des frappes.
 - **Mobile, à l'envoi** : le pulse attend que le champ soit `visible` (défilement, clavier), **1 s** au plus, puis `canBeSeen`, sinon `skipped`.
-- **Rien** pour : le retour au neutre, le focus, la saisie, le survol, l'autofill (`:autofill`). Champ désactivé ou en lecture seule : aucun effet, `trigger()` → `skipped`.
+- **Rien** pour : le retour au neutre, la saisie, le survol, l'autofill (`:autofill`). Le focus ne joue aucun effet shader : il est rendu par le CSS (§3.4). Champ désactivé ou en lecture seule : aucun effet, `trigger()` → `skipped`.
 - `prefers-reduced-motion` : fondu du contour, diode fixe pour `loading`. `forced-colors` : pas de shader.
 
 ### 3.3 La diode
@@ -121,6 +121,14 @@ Témoin de l'état et source de la lumière : éteinte (neutre), corail (`error`
 ### 3.4 Rendu au repos
 
 Texte ≥ **16 px** (sinon iOS zoome au focus), hauteur ≥ **44 px**, bordure et focus à 3:1 sans shader.
+
+**Focus** : il montre où l'on est, très sobrement.
+
+- Un contour fin de **1 px**, blanc neutre, collé à la bordure, DOIT apparaître et disparaître en fondu de **150 ms**, et rester affiché tant que le champ a le focus.
+- Il est rendu par le CSS (`:focus-visible`) : aucun shader, aucune frame, pas de halo ni de pulsation.
+- Il s'ajoute à la bordure sans la remplacer : un champ en `error` ou `valid` garde la couleur de son état.
+- Sur un champ en `error` ou `valid`, il DOIT s'atténuer (blanc à 60 %) : l'état reste le signal principal. Il garde un contraste d'au moins 3:1.
+- `prefers-reduced-motion` : pas de fondu, le contour apparaît directement. `forced-colors` : couleur système.
 
 ### 3.5 API
 
@@ -297,6 +305,8 @@ Seulement l'essentiel : ce qui protège l'utilisateur, les garanties de la lib, 
 | Diode, en LTR et en RTL | les effets partent de la diode |
 | Validation, en LTR et en RTL | tour complet depuis le coin haut gauche ; depuis le coin haut droit, dans l'autre sens |
 | Erreur sans texte associé | avertissement en mode dev |
+| Vérification terminée, focus gardé, obligatoire rempli | `valid` et sweep, sans attendre la sortie du champ |
+| Focus sur un champ | contour neutre par le CSS, aucun effet joué ; la bordure d'état est conservée |
 
 ### 6.5 Button (§4)
 
@@ -324,6 +334,7 @@ Seulement l'essentiel : ce qui protège l'utilisateur, les garanties de la lib, 
 
 ## Historique
 
+- **0.3** : l'Input montre le focus par un contour neutre en fondu, rendu par le CSS (§3.2, §3.4). Une vérification terminée après une saisie vaut interaction (§3.1).
 - **0.2** : `watchForm` branche lui-même ses éléments (`fields: "auto"`), et `autoInit()` reconnaît `data-shader-ui="form"` (§2.4).
 - **0.1** (révision) : renvoi aux conventions retiré, elles vivent sur le site ; les règles ne changent pas.
 - **0.1** : première version validée.
