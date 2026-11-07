@@ -17,6 +17,8 @@
 @property --sui-fx-duration { syntax: "*"; inherits: true; }
 @property --sui-link-light { syntax: "*"; inherits: true; }
 @property --sui-scrollspy-current { syntax: "*"; inherits: true; }
+/* Posée par le scrollspy : décalage de l'entrée courante jusqu'au rail (spec Scrollspy §9) */
+@property --sui-rail-offset { syntax: "*"; inherits: false; }
 /* Valeurs du site pour ::highlight(sui-link) : héritées, la plage peut couvrir un <strong> dans le lien */
 @property --sui-link-color { syntax: "*"; inherits: true; }
 @property --sui-link-line { syntax: "*"; inherits: true; }

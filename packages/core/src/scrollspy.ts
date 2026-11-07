@@ -170,12 +170,9 @@ export function scrollspy(container: Element, options: ScrollspyOptions = {}): (
 
   /** Entrée de niveau 1 d'une entrée : elle-même, ou la dernière qui la précède dans le sommaire. */
   function topOf(link: HTMLAnchorElement): HTMLAnchorElement | null {
-    let found: HTMLAnchorElement | null = null;
-    for (const { link: l } of top()) {
-      if (l === link || l.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING) found = l;
-      else break;
-    }
-    return found;
+    const entries = entriesOf(container);
+    for (let k = entries.findIndex((e) => e.link === link); k >= 0; k--) if (entries[k]!.level === 1) return entries[k]!.link;
+    return null;
   }
 
   /**
