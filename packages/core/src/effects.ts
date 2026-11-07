@@ -6,7 +6,8 @@ export type EffectKind =
   | "sweep" // un arc fait le tour une fois
   | "ripple" // deux arcs partent d'un point et se rejoignent en face
   | "orbit" // un arc tourne en boucle (état en cours uniquement)
-  | "underline"; // un trait avance sous le texte, dans le sens de lecture (label, legend)
+  | "underline" // un trait avance sous le texte, dans le sens de lecture (label, legend)
+  | "rail"; // un segment droit glisse le long d'une ligne verticale (scrollspy)
 
 /** Un effet est une donnée : il se compile vers WebGL aujourd'hui, WGSL demain. */
 export interface EffectDefinition {
@@ -20,6 +21,8 @@ export interface EffectDefinition {
   loop?: boolean;
   /** Durée max d'une boucle en ms (WCAG 2.2.2). 5000 par défaut, plafonnée à 5000. */
   maxLoopDuration?: number;
+  /** Rémanence en ms, comprise dans `duration` : ce que la lumière quitte s'éteint avec le temps (`rail`). */
+  afterglow?: number;
   /** Intensité, de 0 à 1 (1 par défaut) : une simple lueur, comme les radios traversés par le trajet. */
   intensity?: number;
 }
@@ -40,6 +43,8 @@ const presets = new Map<string, EffectDefinition>([
   ["choice", { kind: "pulse", color: "neutral", duration: 360 }],
   // Trait sous un label ou une legend (§2.2, §5.4) ; la durée est ajustée à la largeur
   ["underline", { kind: "underline", color: "neutral", duration: 500, tail: 0.35 }],
+  // Liseré du sommaire (Scrollspy §6) : `tail` et la durée sont ajustés au trajet
+  ["rail", { kind: "rail", color: "neutral", duration: 400, tail: 0.2 }],
 ]);
 
 export function registerEffect(name: string, definition: EffectDefinition): void {
@@ -97,9 +102,12 @@ export function sampleEffect(def: EffectDefinition, t: number, stoppedAt?: numbe
     case "sweep":
     case "ripple":
     case "underline":
+    case "rail":
     case "orbit": {
       const span = def.kind === "ripple" ? 0.5 : 1;
       // Le trait sous le texte avance à vitesse constante : le sens de lecture se lit mieux
+      // Liseré : plein du départ à l'arrivée, la marque CSS prend le relais sans fondu
+      if (def.kind === "rail") return { intensity: ease(Math.min(k / 0.1, 1)), progress: k, done };
       if (def.kind === "underline") return { intensity: ease(Math.min(k / 0.1, 1)) * (k < 0.8 ? 1 : ease((1 - k) / 0.2)), progress: k, done };
       const intensity = ease(Math.min(k / 0.1, 1)) * (k < 0.6 ? 1 : ease((1 - k) / 0.4));
       // Sweep : décélération douce, le tour complet reste visible ; ripple et orbit gardent la leur

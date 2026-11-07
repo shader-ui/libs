@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { getEngine, Engine, resetEnvironment, setEngine } from "@shader-ui/core";
 import { createRef } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { Button, Form, Input, Light, RevealLinks, ShaderProvider, useEnvironment, type ShaderElement } from "../src/index.js";
+import { Button, Form, Input, Light, RevealLinks, Scrollspy, ShaderProvider, useEnvironment, type ShaderElement } from "../src/index.js";
 
 beforeEach(() => {
   // Rendu CSS (jsdom n'a pas WebGL), horloge réelle
@@ -153,5 +153,24 @@ describe("Liens révélés", () => {
     expect(ref.current).toBe(link);
     expect(link.dataset.suiLink).toBe("pending");
     expect(link.hasAttribute("data-sui")).toBe(false);
+  });
+});
+
+describe("Scrollspy", () => {
+  it("s'attache à son enfant : aria-current posé ; le démontage le retire", () => {
+    const { container, unmount } = render(
+      <>
+        <Scrollspy scroll="fast" scrollTo={() => {}}>
+          <nav>
+            <a href="#intro">Intro</a>
+          </nav>
+        </Scrollspy>
+        <section id="intro" />
+      </>,
+    );
+    const link = container.querySelector("a")!;
+    expect(link.getAttribute("aria-current")).toBe("location");
+    unmount();
+    expect(link.hasAttribute("aria-current")).toBe(false);
   });
 });

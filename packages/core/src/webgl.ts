@@ -14,6 +14,8 @@ export interface Instance {
   tail: number;
   /** Sens de l'arc : 1 horaire, -1 antihoraire (RTL). */
   dir: number;
+  /** Rémanence, en part de la durée (0 : aucune). */
+  afterglow?: number;
   r: number;
   g: number;
   b: number;
@@ -27,7 +29,7 @@ export interface Backend {
   destroy(): void;
 }
 
-export const KIND_ID = { pulse: 0, sweep: 1, ripple: 2, orbit: 3, underline: 4 } as const;
+export const KIND_ID = { pulse: 0, sweep: 1, ripple: 2, orbit: 3, underline: 4, rail: 5 } as const;
 
 /** Selon le niveau de performance : résolution max du canvas, zone dessinée autour du contour et largeur du halo (px CSS). */
 const QUALITY: Record<Tier, { dpr: number; margin: number; halo: number }> = {
@@ -42,7 +44,7 @@ layout(location = 0) in vec2 aCorner;
 layout(location = 1) in vec4 aRect;   // x, y, w, h
 layout(location = 2) in vec4 aShape;  // radius, kind, origin, progress
 layout(location = 3) in vec4 aColor;  // r, g, b, intensity
-layout(location = 4) in vec4 aExtra;  // tail
+layout(location = 4) in vec4 aExtra;  // tail, dir, afterglow
 uniform vec2 uViewport;
 uniform float uMargin;
 out vec2 vP;
@@ -51,6 +53,7 @@ flat out vec4 vShape;
 flat out vec4 vColor;
 flat out float vTail;
 flat out float vDir;
+flat out float vGlow;
 void main() {
   vec2 pos = aRect.xy - uMargin + aCorner * (aRect.zw + 2.0 * uMargin);
   vP = pos - (aRect.xy + aRect.zw * 0.5);
@@ -59,6 +62,7 @@ void main() {
   vColor = aColor;
   vTail = aExtra.x;
   vDir = aExtra.y;
+  vGlow = aExtra.z;
   gl_Position = vec4(pos.x / uViewport.x * 2.0 - 1.0, 1.0 - pos.y / uViewport.y * 2.0, 0.0, 1.0);
 }`;
 
@@ -70,6 +74,7 @@ flat in vec4 vShape;
 flat in vec4 vColor;
 flat in float vTail;
 flat in float vDir;
+flat in float vGlow;
 uniform float uHalo;
 out vec4 outColor;
 const float HALF_PI = 1.5707963;
@@ -135,6 +140,30 @@ void main() {
     if (origin > 0.5) u = 1.0 - u;
     float behind = progress - u;
     mask = behind < 0.0 ? exp(behind * vB.x / 3.0) : exp(-3.0 * behind / max(vTail, 0.01));
+  }
+  if (kind == 5) {
+    // Liseré (Scrollspy §6) : la boîte est la colonne du rail, de l'entrée de départ à l'arrivée.
+    // Trait plein aux bords nets, sans halo (aspect carré). Un segment droit de longueur vTail (part de la colonne) glisse vers le bas
+    // (origin 0) ou vers le haut (origin 1). À l'arrivée, il disparaît : la marque CSS prend le relais
+    // (sinon les deux s'additionnent sur l'entrée).
+    // Rémanence : chaque point quitté par le segment s'éteint avec le temps (vGlow : part de la durée).
+    float dx = max(abs(vP.x) - vB.x, 0.0);
+    edge = clamp(1.0 - dx, 0.0, 1.0);
+    float span = max(2.0 * vB.y, 1.0);
+    float u = vP.y / span + 0.5;
+    if (origin > 0.5) u = 1.0 - u;
+    float g = clamp(vGlow, 0.0, 0.95);
+    float travel = min(progress / (1.0 - g), 1.0);
+    float head = vTail + travel * (1.0 - vTail);
+    float ahead = (u - head) * span;
+    if (travel >= 1.0 && u >= head - vTail) mask = 0.0;
+    else if (ahead > 0.0) mask = clamp(1.0 - ahead, 0.0, 1.0);
+    else if (u >= head - vTail) mask = 1.0;
+    else if (g > 0.0) {
+      // Instant où le segment a quitté ce point, puis décroissance : ~5 % au bout de la rémanence
+      float left = (1.0 - g) * u / max(1.0 - vTail, 0.001);
+      mask = exp(-3.0 * max(progress - left, 0.0) / g);
+    } else mask = exp(-(head - vTail - u) * span / 8.0);
   }
   // Sens horaire par défaut ; antihoraire en RTL (abscisse retournée)
   if (kind == 1 || kind == 3) mask = vDir < 0.0 ? arc(1.0 - s, 1.0 - origin + progress, vTail, total) : arc(s, origin + progress, vTail, total);
@@ -268,7 +297,7 @@ export function createWebGLBackend(): Backend | undefined {
       if (data.length < instances.length * FLOATS) data = new Float32Array(instances.length * FLOATS * 2);
       instances.forEach((it, i) => {
         data.set(
-          [it.x, it.y, it.w, it.h, it.radius, it.kind, it.origin, it.progress, it.r, it.g, it.b, it.intensity, it.tail, it.dir, 0, 0],
+          [it.x, it.y, it.w, it.h, it.radius, it.kind, it.origin, it.progress, it.r, it.g, it.b, it.intensity, it.tail, it.dir, it.afterglow ?? 0, 0],
           i * FLOATS,
         );
       });

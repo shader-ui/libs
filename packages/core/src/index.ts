@@ -13,6 +13,8 @@ export type { Choice, ChoiceState } from "./choice.js";
 export { legendOf, underline } from "./underline.js";
 export { revealLinks, revealStateOf, WAVE_GATHER, WAVE_MAX, IMAGE_LINK_DURATION, LINK_FADE, LINK_SPEED, LINK_SPEED_MIN, LINK_SPEED_MAX, LINK_MAX } from "./reveal-links.js";
 export type { RevealLinksOptions, RevealState, RevealInitial } from "./reveal-links.js";
+export { scrollspy, RAIL_SPEED, RAIL_MIN, RAIL_MAX, RAIL_AFTERGLOW, SCROLL_IDLE } from "./scrollspy.js";
+export type { ScrollspyOptions, ScrollMode } from "./scrollspy.js";
 export { autoInit } from "./auto-init.js";
 export { getEngine, setEngine, Engine } from "./engine.js";
 export type { EndReason, SkipCause, Origin, PlayOptions, Stats, EngineOptions } from "./engine.js";

@@ -1,14 +1,16 @@
 import { isBrowser } from "./env.js";
 import { watchForm } from "./form.js";
 import { revealLinks, type RevealInitial } from "./reveal-links.js";
+import { scrollspy, type ScrollMode } from "./scrollspy.js";
 
 /**
  * Attributs HTML pour un CMS, du PHP ou du Markdown : `<article data-shader-ui="reveal-links">`,
- * `<form data-shader-ui="form" data-sui-guide>` (spec Formulaire §2.4).
+ * `<form data-shader-ui="form" data-sui-guide>` (spec Formulaire §2.4), `<nav data-shader-ui="scrollspy">` (spec Scrollspy §8).
  */
 const LINKS = '[data-shader-ui~="reveal-links"]';
 const FORM = 'form[data-shader-ui~="form"]';
-const SELECTOR = `${LINKS}, ${FORM}`;
+const SPY = '[data-shader-ui~="scrollspy"]';
+const SELECTOR = `${LINKS}, ${FORM}, ${SPY}`;
 
 let stopAll: (() => void) | undefined;
 
@@ -27,9 +29,10 @@ export function autoInit(): () => void {
     if (node.matches(SELECTOR)) found.unshift(node);
     for (const el of found) {
       if (stops.has(el)) continue;
-      const { suiInitial, suiSpeed } = (el as HTMLElement).dataset;
+      const { suiInitial, suiSpeed, suiScroll, suiElasticity } = (el as HTMLElement).dataset;
       const parts: Array<() => void> = [];
       if (el.matches(LINKS)) parts.push(revealLinks(el, { initial: suiInitial as RevealInitial | undefined, speed: suiSpeed ? Number(suiSpeed) : undefined }));
+      if (el.matches(SPY)) parts.push(scrollspy(el, { scroll: suiScroll as ScrollMode | undefined, elasticity: suiElasticity ? Number(suiElasticity) : undefined }));
       if (el instanceof HTMLFormElement && el.matches(FORM)) {
         const form = watchForm(el, { guide: el.hasAttribute("data-sui-guide") });
         parts.push(() => form.destroy());

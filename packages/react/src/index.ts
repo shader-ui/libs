@@ -11,6 +11,8 @@ export type { FormProps } from "./Form.js";
 export { Light } from "./Light.js";
 export type { LightComponentProps } from "./Light.js";
 export { RevealLinks } from "./RevealLinks.js";
+export { Scrollspy } from "./Scrollspy.js";
+export type { ScrollspyProps } from "./Scrollspy.js";
 export type { RevealLinksProps } from "./RevealLinks.js";
 export { ShaderProvider, useEnvironment, useShaderStats } from "./ShaderProvider.js";
 export type { ShaderProviderProps } from "./ShaderProvider.js";
@@ -41,6 +43,7 @@ export {
   canBeSeenAll,
   revealLinks,
   revealStateOf,
+  scrollspy,
   autoInit,
 } from "@shader-ui/core";
 export type {
@@ -65,6 +68,8 @@ export type {
   Visibility,
   VisibilityState,
   RevealLinksOptions,
+  ScrollspyOptions,
+  ScrollMode,
   RevealState,
   RevealInitial,
 } from "@shader-ui/core";

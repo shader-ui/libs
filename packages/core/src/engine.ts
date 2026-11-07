@@ -273,6 +273,7 @@ export class Engine {
         progress: sample.progress,
         tail: effect.def.tail ?? 0.2,
         dir: effect.reverse ? -1 : 1,
+        afterglow: effect.def.afterglow ? Math.min(effect.def.afterglow / effect.def.duration, 0.95) : 0,
         r,
         g,
         b,

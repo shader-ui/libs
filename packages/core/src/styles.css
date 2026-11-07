@@ -16,6 +16,7 @@
 @property --sui-fx-color { syntax: "*"; inherits: true; }
 @property --sui-fx-duration { syntax: "*"; inherits: true; }
 @property --sui-link-light { syntax: "*"; inherits: true; }
+@property --sui-scrollspy-current { syntax: "*"; inherits: true; }
 /* Valeurs du site pour ::highlight(sui-link) : héritées, la plage peut couvrir un <strong> dans le lien */
 @property --sui-link-color { syntax: "*"; inherits: true; }
 @property --sui-link-line { syntax: "*"; inherits: true; }
@@ -327,6 +328,45 @@ input[data-sui-choice]:disabled {
       color 200ms ease,
       text-decoration-color 200ms ease,
       border-bottom-color 200ms ease;
+  }
+}
+
+/* Scrollspy (spec Scrollspy §6, §9) : l'entrée courante est marquée par un trait vertical de 2 px posé
+   sur le rail (bord de début de la liste), là où arrive le liseré du shader. --sui-rail-offset (calculé)
+   ramène le trait de l'entrée jusqu'au rail. Pseudo-élément : la mise en page ne bouge pas.
+   Vraie spécificité : la marque porte le sens (aria-current la double). */
+a[data-sui-scrollspy][data-sui-scrollspy] {
+  position: relative;
+}
+a[data-sui-scrollspy][data-sui-scrollspy]::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: calc(-1 * var(--sui-rail-offset, 0px) - 1px);
+  width: 2px;
+  background: var(--sui-scrollspy-current, var(--sui-color-neutral));
+  pointer-events: none;
+  transition: opacity 200ms ease;
+}
+/* Sans trajet (haut de page, mouvement réduit, sans shader) : la marque apparaît en fondu */
+@starting-style {
+  a[data-sui-scrollspy][data-sui-scrollspy]::before {
+    opacity: 0;
+  }
+}
+/* Arrivée de la lumière : la marque prend le relais, sans fondu */
+a[data-sui-scrollspy="arrived"][data-sui-scrollspy]::before {
+  transition: none;
+}
+/* Pendant le trajet, la marque attend l'arrivée de la lumière */
+a[data-sui-scrollspy][data-sui-pending][data-sui-pending]::before {
+  opacity: 0;
+  transition: none;
+}
+@media (forced-colors: active) {
+  a[data-sui-scrollspy][data-sui-scrollspy]::before {
+    forced-color-adjust: none;
+    background: LinkText;
   }
 }
 

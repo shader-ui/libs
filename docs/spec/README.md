@@ -14,6 +14,7 @@ Méthode (voir `../../CLAUDE.md`) : algo discuté, puis spec validée, puis code
 | [Cibles](targets.md) | sur quoi la lib s'applique, cas particuliers, hors périmètre | validée | au fil des composants |
 | [Formulaire](form.md) | Form, Input, Button, Checkbox, Radio | validée (0.3) | fait |
 | [Diagnostic](diagnostics.md) | expliquer un effet qui ne se joue pas | validée (0.1) | fait |
+| [Scrollspy](scrollspy.md) | montrer la section en cours de lecture dans un sommaire | validée (0.1) | fait |
 
 ## À venir
 

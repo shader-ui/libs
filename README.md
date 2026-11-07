@@ -6,7 +6,7 @@ Light with purpose. Accessible UI components whose states are rendered by shader
 
 > ⚠️ **Early development** (0.x): the API may change between minor versions.
 
-Shader UI is a library, not a framework. You describe the state (`status="error"`), never the animation: the light lives on the border, doubles the information (text, icon, ARIA) and never carries it alone. At rest, the interface is still, with zero frames rendered.
+Shader UI is a library, not a framework. The state is read from the HTML (native validity, `aria-invalid`, `aria-busy`), never declared twice, and you never describe the animation: the light lives on the border, doubles the information (text, icon, ARIA) and never carries it alone. At rest, the interface is still, with zero frames rendered.
 
 ## Table of contents
 
@@ -26,7 +26,7 @@ Shader UI is a library, not a framework. You describe the state (`status="error"
 | Package | Content |
 |---|---|
 | `@shader-ui/core` | TypeScript core, WebGL2 engine, CSS fallback. Works without any framework |
-| `@shader-ui/react` | `Input`, `Button`, `Form`, `Light`, `RevealLinks`, `ShaderProvider`, `useVisibility` (re-exports the core) |
+| `@shader-ui/react` | `Input`, `Button`, `Form`, `Checkbox`, `Radio`, `Light`, `RevealLinks`, `Scrollspy`, `ShaderProvider`, `useVisibility` (re-exports the core) |
 
 The normative specification lives in [`docs/spec/`](https://github.com/shader-ui/libs/blob/main/docs/spec/README.md) and prevails over the code.
 
@@ -60,19 +60,20 @@ import { ShaderProvider } from "@shader-ui/react";
 
 ```tsx
 <Form onSubmit={save}>
-  <Input name="email" status={errors.email ? "error" : "valid"} aria-describedby="email-error" />
+  <Input name="email" type="email" required aria-invalid={!!errors.email} aria-describedby="email-error" />
   <Input name="password" effects={{ onPaste: "ripple" }} />
-  <Button type="submit" status={saving ? "loading" : undefined}>Continue</Button>
+  <Button type="submit">Continue</Button>
 </Form>
 
 ref.current?.trigger("pulse", { color: "success" });
 <Input onEffectEnd={(e) => e.name === "success" && next()} />
 ```
 
-- `status`: `"error" | "valid" | "loading"`. Only transitions light up, never the initial state.
+- State comes from the HTML: native validity and `aria-invalid` (error, valid), `aria-busy` (loading). Only transitions light up, never the initial state.
+- `onSubmit` returning a promise sets `aria-busy` on the clicked button until it settles; the button is never disabled.
 - `ref` receives the native element (compatible with react-hook-form), plus `trigger()`.
 - `onEffectEnd` is always called, even when the effect is skipped (`reason: "skipped"`): choreographies never get stuck.
-- `<Light>` adds the light border to any element: `<Light status="valid"><div className="card" /></Light>`.
+- `<Light>` adds the light border to any element: `<Light ref={ref}><div className="card" /></Light>`, then `ref.current?.trigger("success")`.
 - Without React, one call wires the whole form (fields, checkboxes, radios, submit buttons): `watchForm(form, { guide: true, onSubmit: (e) => (e.preventDefault(), save()) })` from `@shader-ui/core`. HTML only: `<form data-shader-ui="form" data-sui-guide>` with `autoInit()`.
 - Server check (name already taken, promo code): set `aria-busy` while waiting and keep `aria-invalid` until the new answer, otherwise the field turns green before the server has confirmed. Start the check after the same typing pause as the library (`TYPING_PAUSE`, 1 s) or on blur.
 - Visibility: an effect never plays on an element that cannot be seen (off screen, covered by a modal, under the virtual keyboard). The module is also available on its own: `const { state, seen } = useVisibility(ref)` in React, or `observeVisibility(element, listener)` and `canBeSeen(element)`.
@@ -103,6 +104,25 @@ Speed: `speed` (px/s, 600 by default), also a prop of `<RevealLinks>` and `<Ligh
 
 The library only sets `data-sui-link` and two computed variables; the rendering lives in `styles.css`. A site rule that wins anyway (an id selector, `!important`) keeps its link style: the link stays visible as a link, without the reveal. Target `[data-sui-link]` to fix it. Pulse color: `--sui-link-light`. Use it on the body of a text, not on navigation, menus or footers.
 
+#### Table of contents that follows the reader
+
+The entry of the section being read gets `aria-current="location"`. When scrolling stops on a new section, a thin straight line of light slides along the edge of the list, from the previous entry to the new one, at constant speed (250 to 500 ms), leaving a short afterglow behind it. Nothing lights up while scrolling. On click, the light starts with the scroll and lands with it.
+
+```tsx
+<Scrollspy scroll="smooth" elasticity={0.3}>
+  <nav>
+    <a href="#install">Install</a>
+    <a href="#usage">Usage</a>
+  </nav>
+</Scrollspy>
+```
+
+- Entries: links to the current page with a fragment (`#install`, or `/docs/guide#install` on `/docs/guide`). Only top-level entries are tracked; nested ones stay clickable.
+- `scroll`: `"none"` (default, native anchor), `"smooth"` or `"fast"`. `elasticity` from 0 to 1. Always instant with `prefers-reduced-motion`.
+- `scrollTo(target, { behavior })`: your own scrolling (Lenis…). Return a promise and the light starts when it resolves.
+- An `aria-current` set by your site is never touched.
+- Without React: `scrollspy(nav, { root, scroll, elasticity, scrollTo })`, or `<nav data-shader-ui="scrollspy" data-sui-scroll="smooth">` with `autoInit()`.
+
 ## Nothing lights up?
 
 Type in the browser console, with or without a bundler, in development or production:
@@ -122,8 +142,8 @@ Type in the browser console, with or without a bundler, in development or produc
 | Max 3 flashes/s (WCAG 2.3.1) | beyond that, effect skipped + dev warning | `engine.test.ts` |
 | Loop ≤ 5 s (WCAG 2.2.2) | `loading` capped, fade out | `effects.test.ts` |
 | `prefers-reduced-motion` (WCAG 2.3.3) | no movement, simple fade, no loop | `engine.test.ts` |
-| Light doubles the information (WCAG 1.4.1) | `aria-invalid`, `aria-busy`, `data-sui-status`, warning if no linked error text | `components.test.tsx` |
-| 3:1 borders without shader (WCAG 1.4.11) | `styles.css`, `light-dark()` colors | — |
+| Light doubles the information (WCAG 1.4.1) | `aria-invalid`, `aria-busy`, warning if no linked error text | `components.test.tsx` |
+| 3:1 borders without shader (WCAG 1.4.11) | `styles.css`, dark mode first | — |
 | Without WebGL2 | CSS fallback, same meaning | `engine.test.ts` |
 | No light on what cannot be seen | effect skipped (`reason: "skipped"`), event-driven, zero frames | `visibility.test.ts` |
 
